@@ -81,8 +81,13 @@ Yetkileri:
 -   fiyat güncelleme
 -   stok yönetimi
 -   sipariş görüntüleme
+-   Geçmiş, iade ve iptal siparişler
+-   finans, ekstre raporları
 -   sipariş durum güncelleme
 -   restoran ayarlarını değiştirme
+-   Tüm ürünlere yüzdesel indirim uygulama
+-   kategori bazlı indirim uygulama
+-   müşteri destek alanı yönetme
 
 ## 4.2 Müşteri
 
@@ -92,6 +97,9 @@ Yapabilecekleri:
 
 -   menüyü görüntüleme
 -   ürün seçme
+-   ürün arama
+-   ürün filtreleme
+-   restoran iletişim (chatbox vb.)
 -   sepete ekleme
 -   sipariş oluşturma
 
@@ -188,6 +196,7 @@ Her ürün için:
 -   açıklama
 -   fiyat
 -   görsel
+-   ürün opsiyonları
 -   sepete ekle butonu
 
 ------------------------------------------------------------------------
@@ -210,6 +219,7 @@ Sepette:
 -   adet
 -   seçenekler
 -   toplam fiyat
+-   minimum sepet tutarı (adrese göre)
 
 ------------------------------------------------------------------------
 
@@ -220,6 +230,9 @@ Sipariş verirken müşteri:
 -   ad soyad
 -   telefon
 -   adres
+-   kurumsal müşteriler için vkn
+-   teslimat (gel al seçeneği eklenebilir)
+-   ödeme türü (kart, nakit)
 -   sipariş notu
 
 girer.
@@ -232,6 +245,7 @@ Sipariş oluşturulduktan sonra:
 
 -   sipariş numarası gösterilir
 -   sipariş onay ekranı gösterilir
+-   tahmini teslimat süresi
 
 ------------------------------------------------------------------------
 
@@ -244,9 +258,13 @@ Admin panelde:
 -   sipariş numarası
 -   müşteri adı
 -   telefon
+-   adres
 -   sipariş zamanı
 -   toplam tutar
 -   sipariş durumu
+-   teslimat türü
+-   ödeme türü (kart, nakit)
+-   sipariş detay slip (mutfak için)
 
 görüntülenir.
 
@@ -259,7 +277,6 @@ Sipariş detayında:
 -   ürün listesi
 -   adet
 -   seçenekler
--   müşteri adresi
 -   müşteri notu
 
 ------------------------------------------------------------------------
@@ -272,6 +289,7 @@ Sipariş detayında:
 -   ready
 -   delivered
 -   cancelled
+-   returned
 
 ------------------------------------------------------------------------
 
@@ -398,6 +416,7 @@ Sistem şu güvenlik önlemlerini içermelidir:
 -   müşteri hesabı
 -   sadakat sistemi
 -   kampanya sistemi
+-   performans metrikleri
 -   WhatsApp chatbot
 -   masa bazlı sipariş
 -   raporlama sistemi
