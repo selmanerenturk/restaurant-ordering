@@ -55,4 +55,4 @@ coverage.xml
 .vscode/
 
 # dotenv
-# .env
+.env
