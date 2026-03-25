@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { BsArrowLeft, BsTrash, BsCheckCircle } from 'react-icons/bs';
+import { BsArrowLeft, BsTrash, BsCheckCircle, BsBellSlash, BsBell } from 'react-icons/bs';
 import { selectCartItems, selectCartTotal, removeFromCart, clearCart } from '../redux/cartSlice';
 import { submitOrder, resetOrder } from '../redux/orderSlice';
 
@@ -21,6 +21,10 @@ function OrderDetails() {
     city: '',
     district: '',
     postal_code: '',
+    delivery_type: 'delivery',
+    payment_type: 'cash',
+    order_note: '',
+    do_not_ring_bell: false,
   });
 
   const [formErrors, setFormErrors] = useState({});
@@ -38,10 +42,12 @@ function OrderDetails() {
     if (!formData.full_name.trim()) errors.full_name = 'İsim ve soyisim alanları boş bırakılamaz';
     if (!formData.phone.trim()) errors.phone = 'Telefon numarası boş bırakılamaz';
     if (!formData.email.trim()) errors.email = 'Email boş bırakılamaz';
-    if (!formData.address_line1.trim()) errors.address_line1 = '1. adres satırı boş bırakılamaz';
-    if (!formData.city.trim()) errors.city = 'Şehir alanı boş bırakılamaz';
-    if (!formData.district.trim()) errors.district = 'İlçe alanı boş bırakılamaz';
-    if (!formData.postal_code.trim()) errors.postal_code = 'Posta kodu boş bırakılamaz';
+    if (formData.delivery_type === 'delivery') {
+      if (!formData.address_line1.trim()) errors.address_line1 = '1. adres satırı boş bırakılamaz';
+      if (!formData.city.trim()) errors.city = 'Şehir alanı boş bırakılamaz';
+      if (!formData.district.trim()) errors.district = 'İlçe alanı boş bırakılamaz';
+      if (!formData.postal_code.trim()) errors.postal_code = 'Posta kodu boş bırakılamaz';
+    }
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -58,16 +64,24 @@ function OrderDetails() {
         email: formData.email,
       },
       delivery_address: {
-        address_line1: formData.address_line1,
+        address_line1: formData.delivery_type === 'delivery' ? formData.address_line1 : 'Gel Al',
         address_line2: formData.address_line2 || null,
-        city: formData.city,
-        district: formData.district,
-        postal_code: formData.postal_code,
+        city: formData.delivery_type === 'delivery' ? formData.city : null,
+        district: formData.delivery_type === 'delivery' ? formData.district : null,
+        postal_code: formData.delivery_type === 'delivery' ? formData.postal_code : null,
         country_code: 'TR',
       },
+      delivery_type: formData.delivery_type,
+      payment_type: formData.payment_type,
+      order_note: formData.order_note || null,
+      do_not_ring_bell: formData.do_not_ring_bell,
       items: cartItems.map((item) => ({
         product_price_id: item.product_price_id,
         quantity: item.quantity,
+        selected_options: (item.selected_options || []).map((o) => ({
+          option_item_id: o.option_item_id,
+          is_removed: o.is_removed || false,
+        })),
       })),
       turnstile_token: 'not-required',
     };
@@ -134,31 +148,54 @@ function OrderDetails() {
               <h5 className="mb-0 fw-bold">Sipariş özeti</h5>
             </div>
             <div className="card-body">
-              {cartItems.map((item) => (
-                <div key={item.product_price_id} className="d-flex align-items-center mb-3 pb-3 border-bottom">
-                  <img
-                    src={item.imageurl}
-                    alt={item.product_name}
-                    className="rounded me-3"
-                    style={{ width: '50px', height: '50px', objectFit: 'cover' }}
-                  />
-                  <div className="flex-grow-1">
-                    <h6 className="mb-0 fw-semibold">{item.product_name}</h6>
-                    <small className="text-muted">
-                      {item.quantity_code} {item.unit_code} × {item.quantity}
-                    </small>
+              {cartItems.map((item) => {
+                const optionsExtra = (item.selected_options || []).reduce((sum, o) => sum + (o.extra_price || 0), 0);
+                const lineTotal = (item.price + optionsExtra) * item.quantity;
+                return (
+                  <div key={item.cartKey} className="d-flex align-items-center mb-3 pb-3 border-bottom">
+                    <img
+                      src={item.imageurl}
+                      alt={item.product_name}
+                      className="rounded me-3"
+                      style={{ width: '50px', height: '50px', objectFit: 'cover' }}
+                    />
+                    <div className="flex-grow-1">
+                      <h6 className="mb-0 fw-semibold">{item.product_name}</h6>
+                      <small className="text-muted">
+                        {item.quantity_code} {item.unit_code} × {item.quantity}
+                      </small>
+                      {item.selected_options && item.selected_options.filter((o) => o.is_removed || o.extra_price > 0).length > 0 && (
+                        <div className="mt-1">
+                          {item.selected_options
+                            .filter((o) => o.is_removed || o.extra_price > 0)
+                            .map((opt, idx) => (
+                              <span
+                                key={idx}
+                                className={`badge me-1 ${opt.is_removed ? 'bg-danger-subtle text-danger' : 'bg-light text-dark'}`}
+                                style={{ fontSize: '0.65rem' }}
+                              >
+                                {opt.is_removed ? (
+                                  <><s>{opt.item_name}</s> ✕</>
+                                ) : (
+                                  <>{opt.item_name}{opt.extra_price > 0 && ` +${opt.extra_price.toFixed(2)}₺`}</>
+                                )}
+                              </span>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-end">
+                      <span className="fw-bold">{lineTotal.toFixed(2)} {item.currency_code}</span>
+                      <button
+                        className="btn btn-sm btn-link text-danger d-block ms-auto"
+                        onClick={() => dispatch(removeFromCart(item.cartKey))}
+                      >
+                        <BsTrash />
+                      </button>
+                    </div>
                   </div>
-                  <div className="text-end">
-                    <span className="fw-bold">{(item.price * item.quantity).toFixed(2)} {item.currency_code}</span>
-                    <button
-                      className="btn btn-sm btn-link text-danger d-block ms-auto"
-                      onClick={() => dispatch(removeFromCart(item.product_price_id))}
-                    >
-                      <BsTrash />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
               <div className="d-flex justify-content-between pt-2">
                 <span className="fs-5 fw-bold">Toplam:</span>
                 <span className="fs-5 fw-bold">{cartTotal.toFixed(2)} TRY</span>
@@ -175,6 +212,58 @@ function OrderDetails() {
             </div>
             <div className="card-body">
               <form onSubmit={handleSubmitOrder}>
+                {/* Teslimat Türü */}
+                <div className="mb-4">
+                  <label className="form-label fw-semibold">Teslimat Türü *</label>
+                  <div className="d-flex gap-2">
+                    <button
+                      type="button"
+                      className={`btn flex-fill ${
+                        formData.delivery_type === 'delivery' ? 'btn-gold' : 'btn-outline-secondary'
+                      }`}
+                      onClick={() => setFormData((prev) => ({ ...prev, delivery_type: 'delivery' }))}
+                    >
+                      Adrese Teslimat
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn flex-fill ${
+                        formData.delivery_type === 'pickup' ? 'btn-gold' : 'btn-outline-secondary'
+                      }`}
+                      onClick={() => setFormData((prev) => ({ ...prev, delivery_type: 'pickup', do_not_ring_bell: false }))}
+                    >
+                      Gel Al
+                    </button>
+                  </div>
+                </div>
+
+                {/* Ödeme Türü */}
+                <div className="mb-4">
+                  <label className="form-label fw-semibold">Ödeme Türü *</label>
+                  <div className="d-flex gap-2">
+                    <button
+                      type="button"
+                      className={`btn flex-fill ${
+                        formData.payment_type === 'cash' ? 'btn-gold' : 'btn-outline-secondary'
+                      }`}
+                      onClick={() => setFormData((prev) => ({ ...prev, payment_type: 'cash' }))}
+                    >
+                      Nakit
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn flex-fill ${
+                        formData.payment_type === 'card' ? 'btn-gold' : 'btn-outline-secondary'
+                      }`}
+                      onClick={() => setFormData((prev) => ({ ...prev, payment_type: 'card' }))}
+                    >
+                      Kart (Kapıda)
+                    </button>
+                  </div>
+                </div>
+
+                <hr className="my-3" />
+
                 <div className="row">
                   <div className="col-md-6 mb-3">
                     <label className="form-label fw-semibold">İsim ve Soyisim *</label>
@@ -215,71 +304,117 @@ function OrderDetails() {
                   {formErrors.email && <div className="invalid-feedback">{formErrors.email}</div>}
                 </div>
 
-                <div className="mb-3">
-                  <label className="form-label fw-semibold">1. Adres satırı *</label>
-                  <input
-                    type="text"
-                    className={`form-control ${formErrors.address_line1 ? 'is-invalid' : ''}`}
-                    name="address_line1"
-                    value={formData.address_line1}
-                    onChange={handleChange}
-                    placeholder="Mahalle, sokak no."
-                  />
-                  {formErrors.address_line1 && <div className="invalid-feedback">{formErrors.address_line1}</div>}
-                </div>
+                {formData.delivery_type === 'delivery' && (
+                  <>
+                    <div className="mb-3">
+                      <label className="form-label fw-semibold">1. Adres satırı *</label>
+                      <input
+                        type="text"
+                        className={`form-control ${formErrors.address_line1 ? 'is-invalid' : ''}`}
+                        name="address_line1"
+                        value={formData.address_line1}
+                        onChange={handleChange}
+                        placeholder="Mahalle, sokak no."
+                      />
+                      {formErrors.address_line1 && <div className="invalid-feedback">{formErrors.address_line1}</div>}
+                    </div>
+
+                    <div className="mb-3">
+                      <label className="form-label fw-semibold">2. Adres satırı</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        name="address_line2"
+                        value={formData.address_line2}
+                        onChange={handleChange}
+                        placeholder="Apartman, bina no."
+                      />
+                    </div>
+
+                    <div className="row">
+                      <div className="col-md-6 mb-3">
+                        <label className="form-label fw-semibold">Şehir *</label>
+                        <input
+                          type="text"
+                          className={`form-control ${formErrors.city ? 'is-invalid' : ''}`}
+                          name="city"
+                          value={formData.city}
+                          onChange={handleChange}
+                          placeholder="Ankara"
+                        />
+                        {formErrors.city && <div className="invalid-feedback">{formErrors.city}</div>}
+                      </div>
+                      <div className="col-md-6 mb-3">
+                        <label className="form-label fw-semibold">İlçe *</label>
+                        <input
+                          type="text"
+                          className={`form-control ${formErrors.district ? 'is-invalid' : ''}`}
+                          name="district"
+                          value={formData.district}
+                          onChange={handleChange}
+                          placeholder="Çankaya"
+                        />
+                        {formErrors.district && <div className="invalid-feedback">{formErrors.district}</div>}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {formData.delivery_type === 'pickup' && (
+                  <div className="alert alert-info mb-3">
+                    <strong>Gel Al</strong> seçeneğini tercih ettiniz. Siparişiniz hazır olduğunda restorandan teslim alabilirsiniz.
+                  </div>
+                )}
+
+                {formData.delivery_type === 'delivery' && (
+                  <div className="row">
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label fw-semibold">Posta Kodu *</label>
+                      <input
+                        type="text"
+                        className={`form-control ${formErrors.postal_code ? 'is-invalid' : ''}`}
+                        name="postal_code"
+                        value={formData.postal_code}
+                        onChange={handleChange}
+                        placeholder="Posta kodu"
+                      />
+                      {formErrors.postal_code && <div className="invalid-feedback">{formErrors.postal_code}</div>}
+                    </div>
+                  </div>
+                )}
+
+                {/* Zile Basma */}
+                {formData.delivery_type === 'delivery' && (
+                  <div className="mb-3">
+                    <div className="form-check form-switch d-flex align-items-center gap-2 p-2 border rounded">
+                      <input
+                        type="checkbox"
+                        className="form-check-input ms-0"
+                        role="switch"
+                        id="doNotRingBell"
+                        checked={formData.do_not_ring_bell}
+                        onChange={() =>
+                          setFormData((prev) => ({ ...prev, do_not_ring_bell: !prev.do_not_ring_bell }))
+                        }
+                      />
+                      <label className="form-check-label d-flex align-items-center gap-2" htmlFor="doNotRingBell">
+                        {formData.do_not_ring_bell ? <BsBellSlash size={18} /> : <BsBell size={18} />}
+                        <span className="fw-semibold">Zile Basma</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
 
                 <div className="mb-3">
-                  <label className="form-label fw-semibold">2. Adres satırı</label>
-                  <input
-                    type="text"
+                  <label className="form-label fw-semibold">Sipariş Notu</label>
+                  <textarea
                     className="form-control"
-                    name="address_line2"
-                    value={formData.address_line2}
+                    name="order_note"
+                    value={formData.order_note}
                     onChange={handleChange}
-                    placeholder="Apartman, bina no."
+                    placeholder="Eklemek istediğiniz notları buraya yazabilirsiniz..."
+                    rows={3}
                   />
-                </div>
-
-                <div className="row">
-                  <div className="col-md-6 mb-3">
-                    <label className="form-label fw-semibold">Şehir *</label>
-                    <input
-                      type="text"
-                      className={`form-control ${formErrors.city ? 'is-invalid' : ''}`}
-                      name="city"
-                      value={formData.city}
-                      onChange={handleChange}
-                      placeholder="Ankara"
-                    />
-                    {formErrors.city && <div className="invalid-feedback">{formErrors.city}</div>}
-                  </div>
-                  <div className="col-md-6 mb-3">
-                    <label className="form-label fw-semibold">İlçe *</label>
-                    <input
-                      type="text"
-                      className={`form-control ${formErrors.district ? 'is-invalid' : ''}`}
-                      name="district"
-                      value={formData.district}
-                      onChange={handleChange}
-                      placeholder="Çankaya"
-                    />
-                    {formErrors.district && <div className="invalid-feedback">{formErrors.district}</div>}
-                  </div>
-                </div>
-
-                <div className="row">
-                  <div className="col-md-6 mb-3">
-                    <label className="form-label fw-semibold">Posta Kodu *</label>
-                    <input
-                      type="text"
-                      className={`form-control ${formErrors.postal_code ? 'is-invalid' : ''}`}
-                      name="postal_code"
-                      value={formData.postal_code}
-                      onChange={handleChange}
-                      placeholder="Posta kodu"
-                    />
-                    {formErrors.postal_code && <div className="invalid-feedback">{formErrors.postal_code}</div>}
-                  </div>
                 </div>
 
                 {error && (

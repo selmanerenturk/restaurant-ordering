@@ -10,6 +10,8 @@ import SellerDashboard from './pages/SellerDashboard';
 import ManageCategories from './pages/ManageCategories';
 import ManageProducts from './pages/ManageProducts';
 import ManagePrices from './pages/ManagePrices';
+import ManageOrders from './pages/ManageOrders';
+import ManageProductOptions from './pages/ManageProductOptions';
 import './App.css';
 
 function App() {
@@ -28,6 +30,8 @@ function App() {
             <Route path="/seller/categories" element={<ProtectedRoute><ManageCategories /></ProtectedRoute>} />
             <Route path="/seller/products" element={<ProtectedRoute><ManageProducts /></ProtectedRoute>} />
             <Route path="/seller/prices" element={<ProtectedRoute><ManagePrices /></ProtectedRoute>} />
+            <Route path="/seller/orders" element={<ProtectedRoute><ManageOrders /></ProtectedRoute>} />
+            <Route path="/seller/product-options" element={<ProtectedRoute><ManageProductOptions /></ProtectedRoute>} />
           </Routes>
         </main>
         <footer className="pastry-footer text-center py-4">

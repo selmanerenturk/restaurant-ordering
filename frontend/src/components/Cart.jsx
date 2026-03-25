@@ -39,49 +39,72 @@ function Cart() {
               <p className="text-muted">Sepetiniz boş</p>
             </div>
           ) : (
-            items.map((item) => (
-              <div key={item.product_price_id} className="cart-item d-flex align-items-center mb-3 p-2 rounded">
-                <img
-                  src={item.imageurl}
-                  alt={item.product_name}
-                  className="cart-item-img rounded me-3"
-                />
-                <div className="flex-grow-1">
-                  <h6 className="mb-1 fw-semibold">{item.product_name}</h6>
-                  <small className="text-muted">
-                    {item.quantity_code} {item.unit_code}
-                  </small>
-                  <div className="d-flex align-items-center mt-1">
+            items.map((item) => {
+              const optionsExtra = (item.selected_options || []).reduce((sum, o) => sum + (o.extra_price || 0), 0);
+              const lineTotal = (item.price + optionsExtra) * item.quantity;
+              return (
+                <div key={item.cartKey} className="cart-item d-flex align-items-center mb-3 p-2 rounded">
+                  <img
+                    src={item.imageurl}
+                    alt={item.product_name}
+                    className="cart-item-img rounded me-3"
+                  />
+                  <div className="flex-grow-1">
+                    <h6 className="mb-1 fw-semibold">{item.product_name}</h6>
+                    <small className="text-muted">
+                      {item.quantity_code} {item.unit_code}
+                    </small>
+                    {item.selected_options && item.selected_options.filter((o) => o.is_removed || o.extra_price > 0).length > 0 && (
+                      <div className="mt-1">
+                        {item.selected_options
+                          .filter((o) => o.is_removed || o.extra_price > 0)
+                          .map((opt, idx) => (
+                            <span
+                              key={idx}
+                              className={`badge me-1 mb-1 ${opt.is_removed ? 'bg-danger-subtle text-danger' : 'bg-light text-dark'}`}
+                              style={{ fontSize: '0.7rem' }}
+                            >
+                              {opt.is_removed ? (
+                                <><s>{opt.item_name}</s> ✕</>
+                              ) : (
+                                <>{opt.item_name}{opt.extra_price > 0 && ` +${opt.extra_price.toFixed(2)}₺`}</>
+                              )}
+                            </span>
+                          ))}
+                      </div>
+                    )}
+                    <div className="d-flex align-items-center mt-1">
+                      <button
+                        className="btn btn-sm btn-outline-secondary"
+                        onClick={() =>
+                          dispatch(updateQuantity({ cartKey: item.cartKey, quantity: item.quantity - 1 }))
+                        }
+                      >
+                        <BsDash />
+                      </button>
+                      <span className="mx-2 fw-semibold">{item.quantity}</span>
+                      <button
+                        className="btn btn-sm btn-outline-secondary"
+                        onClick={() =>
+                          dispatch(updateQuantity({ cartKey: item.cartKey, quantity: item.quantity + 1 }))
+                        }
+                      >
+                        <BsPlus />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="text-end">
+                    <p className="mb-1 fw-bold">{lineTotal.toFixed(2)} {item.currency_code}</p>
                     <button
-                      className="btn btn-sm btn-outline-secondary"
-                      onClick={() =>
-                        dispatch(updateQuantity({ product_price_id: item.product_price_id, quantity: item.quantity - 1 }))
-                      }
+                      className="btn btn-sm btn-outline-danger"
+                      onClick={() => dispatch(removeFromCart(item.cartKey))}
                     >
-                      <BsDash />
-                    </button>
-                    <span className="mx-2 fw-semibold">{item.quantity}</span>
-                    <button
-                      className="btn btn-sm btn-outline-secondary"
-                      onClick={() =>
-                        dispatch(updateQuantity({ product_price_id: item.product_price_id, quantity: item.quantity + 1 }))
-                      }
-                    >
-                      <BsPlus />
+                      <BsTrash />
                     </button>
                   </div>
                 </div>
-                <div className="text-end">
-                  <p className="mb-1 fw-bold">{(item.price * item.quantity).toFixed(2)} {item.currency_code}</p>
-                  <button
-                    className="btn btn-sm btn-outline-danger"
-                    onClick={() => dispatch(removeFromCart(item.product_price_id))}
-                  >
-                    <BsTrash />
-                  </button>
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
 

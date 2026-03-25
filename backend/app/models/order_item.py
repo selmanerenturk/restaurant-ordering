@@ -22,3 +22,4 @@ class OrderItem(Base):
     line_total = Column(Numeric(10, 2), nullable=False)
 
     order = relationship("Order", back_populates="items")
+    selected_options = relationship("OrderItemOption", back_populates="order_item", cascade="all, delete-orphan")

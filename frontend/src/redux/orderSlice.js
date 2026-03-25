@@ -1,11 +1,14 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { createOrder } from '../services/orderService';
+import { clearCart } from './cartSlice';
 
 export const submitOrder = createAsyncThunk(
   'order/submit',
-  async (orderData, { rejectWithValue }) => {
+  async (orderData, { dispatch, rejectWithValue }) => {
     try {
-      return await createOrder(orderData);
+      const result = await createOrder(orderData);
+      dispatch(clearCart());
+      return result;
     } catch (error) {
       return rejectWithValue(error.response?.data?.detail || 'Failed to submit order');
     }

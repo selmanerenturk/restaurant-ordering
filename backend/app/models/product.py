@@ -16,3 +16,4 @@ class Product(Base):
 
     category = relationship("Category", back_populates="products")
     prices = relationship("ProductPrice", back_populates="product")
+    options = relationship("ProductOption", back_populates="product", cascade="all, delete-orphan", order_by="ProductOption.sort_order")

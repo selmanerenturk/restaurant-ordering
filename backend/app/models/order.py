@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Numeric, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, Numeric, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base import Base
@@ -25,6 +25,11 @@ class Order(Base):
     district = Column(String)
     postal_code = Column(String)
     country_code = Column(String(2), nullable=False, default="TR")
+
+    delivery_type = Column(String(20), nullable=False, default="delivery")
+    payment_type = Column(String(20), nullable=False, default="cash")
+    order_note = Column(String, nullable=True)
+    do_not_ring_bell = Column(Boolean, nullable=False, default=False)
 
     client_ip = Column(String)
     turnstile_verified_at = Column(DateTime(timezone=True))
