@@ -249,6 +249,17 @@ Sipariş oluşturulduktan sonra:
 
 ------------------------------------------------------------------------
 
+## Sipariş Takibi / Sipariş Görüntüleme (Üyelik Yok)
+
+Müşteri sisteme giriş yapmayacağı için sipariş oluşturulduktan sonra siparişi görüntüleyebilmesi için aşağıdaki yöntemlerden en az biri MVP kapsamında desteklenmelidir:
+
+-   **Link ile görüntüleme:** Sipariş sonrası müşterinin **email** adresine ve/veya **WhatsApp** üzerinden sipariş detay ekranına giden bir link gönderilir.
+-   **Kod ile görüntüleme:** Müşteri UI üzerinden **sipariş kodu/numarası** ve **email adresini** girerek sipariş detayını görüntüler.
+
+Güvenlik notu (MVP): Link veya kod tabanlı erişim, sipariş bilgilerini ifşa etmeyecek şekilde kurgulanmalıdır (tahmin edilebilir link/kod olmamalı).
+
+------------------------------------------------------------------------
+
 # 9. Sipariş Yönetimi
 
 ## Sipariş Listesi
@@ -380,10 +391,12 @@ gönderilebilir.
 -   users
 -   categories
 -   products
+-   product_prices
 -   product_options
 -   orders
 -   order_items
 -   order_item_options
+-   order_stages
 -   restaurant_settings
 
 ------------------------------------------------------------------------
