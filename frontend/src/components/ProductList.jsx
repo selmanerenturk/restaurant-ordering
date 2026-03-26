@@ -29,10 +29,32 @@ function ProductList() {
     );
   }
 
+  // Group products by category
+  const grouped = {};
+  items.forEach((product) => {
+    const catId = product.category_id || 0;
+    if (!grouped[catId]) {
+      grouped[catId] = {
+        name: product.category_name || 'Diğer',
+        sortOrder: product.category_sort_order || 0,
+        products: [],
+      };
+    }
+    grouped[catId].products.push(product);
+  });
+  const categoryGroups = Object.values(grouped).sort((a, b) => a.sortOrder - b.sortOrder);
+
   return (
-    <div className="row">
-      {items.map((product) => (
-        <ProductLite key={product.product_id} product={product} />
+    <div>
+      {categoryGroups.map((group) => (
+        <div key={group.name} className="mb-5">
+          <h3 className="fw-bold mb-3 section-title">{group.name}</h3>
+          <div className="row">
+            {group.products.map((product) => (
+              <ProductLite key={product.product_id} product={product} />
+            ))}
+          </div>
+        </div>
       ))}
     </div>
   );

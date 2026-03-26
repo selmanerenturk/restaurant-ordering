@@ -1,7 +1,16 @@
 import { useState, useEffect } from 'react';
-import { BsArrowLeft, BsPlusCircle } from 'react-icons/bs';
+import {
+  BsArrowLeft,
+  BsPlusCircle,
+  BsArrowUp,
+  BsArrowDown,
+  BsPencil,
+  BsTrash,
+  BsCheck2,
+  BsX,
+} from 'react-icons/bs';
 import { useNavigate } from 'react-router-dom';
-import { fetchCategories, createCategory } from '../services/categoryService';
+import { fetchCategories, createCategory, updateCategory, deleteCategory } from '../services/categoryService';
 
 function ManageCategories() {
   const navigate = useNavigate();
@@ -9,8 +18,10 @@ function ManageCategories() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({ name: '', description: '' });
+  const [formData, setFormData] = useState({ name: '', description: '', sort_order: 0 });
   const [submitting, setSubmitting] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [editData, setEditData] = useState({});
 
   const loadCategories = async () => {
     try {
@@ -33,14 +44,62 @@ function ManageCategories() {
     e.preventDefault();
     try {
       setSubmitting(true);
-      await createCategory(formData);
-      setFormData({ name: '', description: '' });
+      await createCategory({ ...formData, sort_order: categories.length });
+      setFormData({ name: '', description: '', sort_order: 0 });
       setShowForm(false);
       await loadCategories();
     } catch (err) {
       setError(err.response?.data?.detail || 'Kategori oluşturulurken hata oluştu');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleToggleActive = async (cat) => {
+    try {
+      await updateCategory(cat.id, { is_active: !cat.is_active });
+      await loadCategories();
+    } catch {
+      setError('Durum güncellenirken hata oluştu');
+    }
+  };
+
+  const handleMove = async (cat, direction) => {
+    const idx = categories.findIndex((c) => c.id === cat.id);
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= categories.length) return;
+    const other = categories[swapIdx];
+    try {
+      await updateCategory(cat.id, { sort_order: other.sort_order });
+      await updateCategory(other.id, { sort_order: cat.sort_order });
+      await loadCategories();
+    } catch {
+      setError('Sıralama güncellenirken hata oluştu');
+    }
+  };
+
+  const handleStartEdit = (cat) => {
+    setEditingId(cat.id);
+    setEditData({ name: cat.name, description: cat.description });
+  };
+
+  const handleSaveEdit = async () => {
+    try {
+      await updateCategory(editingId, editData);
+      setEditingId(null);
+      await loadCategories();
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Güncelleme sırasında hata oluştu');
+    }
+  };
+
+  const handleDelete = async (catId) => {
+    if (!window.confirm('Bu kategoriyi silmek istediğinize emin misiniz?')) return;
+    try {
+      await deleteCategory(catId);
+      await loadCategories();
+    } catch {
+      setError('Kategori silinirken hata oluştu');
     }
   };
 
@@ -110,25 +169,96 @@ function ManageCategories() {
       ) : (
         <div className="card border-0 shadow-sm">
           <div className="table-responsive">
-            <table className="table table-hover mb-0">
+            <table className="table table-hover mb-0 align-middle">
               <thead className="table-light">
                 <tr>
-                  <th>ID</th>
+                  <th style={{ width: '70px' }}>Sıra</th>
                   <th>İsim</th>
                   <th>Açıklama</th>
+                  <th style={{ width: '90px' }}>Durum</th>
+                  <th style={{ width: '160px' }}>İşlem</th>
                 </tr>
               </thead>
               <tbody>
                 {categories.length === 0 ? (
                   <tr>
-                    <td colSpan="3" className="text-center py-4 text-muted">Kategori bulunamadı</td>
+                    <td colSpan="5" className="text-center py-4 text-muted">Kategori bulunamadı</td>
                   </tr>
                 ) : (
-                  categories.map((cat) => (
-                    <tr key={cat.id}>
-                      <td>{cat.id}</td>
-                      <td className="fw-semibold">{cat.name}</td>
-                      <td>{cat.description}</td>
+                  categories.map((cat, idx) => (
+                    <tr key={cat.id} className={!cat.is_active ? 'table-secondary' : ''}>
+                      <td>
+                        <div className="d-flex gap-1">
+                          <button
+                            className="btn btn-sm btn-outline-secondary p-0 px-1"
+                            disabled={idx === 0}
+                            onClick={() => handleMove(cat, 'up')}
+                            title="Yukarı"
+                          >
+                            <BsArrowUp />
+                          </button>
+                          <button
+                            className="btn btn-sm btn-outline-secondary p-0 px-1"
+                            disabled={idx === categories.length - 1}
+                            onClick={() => handleMove(cat, 'down')}
+                            title="Aşağı"
+                          >
+                            <BsArrowDown />
+                          </button>
+                        </div>
+                      </td>
+                      <td>
+                        {editingId === cat.id ? (
+                          <input
+                            type="text"
+                            className="form-control form-control-sm"
+                            value={editData.name}
+                            onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+                          />
+                        ) : (
+                          <span className="fw-semibold">{cat.name}</span>
+                        )}
+                      </td>
+                      <td>
+                        {editingId === cat.id ? (
+                          <input
+                            type="text"
+                            className="form-control form-control-sm"
+                            value={editData.description}
+                            onChange={(e) => setEditData({ ...editData, description: e.target.value })}
+                          />
+                        ) : (
+                          cat.description
+                        )}
+                      </td>
+                      <td>
+                        <div className="form-check form-switch mb-0">
+                          <input
+                            type="checkbox"
+                            className="form-check-input"
+                            role="switch"
+                            checked={cat.is_active}
+                            onChange={() => handleToggleActive(cat)}
+                          />
+                        </div>
+                      </td>
+                      <td>
+                        {editingId === cat.id ? (
+                          <div className="d-flex gap-1">
+                            <button className="btn btn-sm btn-success" onClick={handleSaveEdit}><BsCheck2 /></button>
+                            <button className="btn btn-sm btn-outline-secondary" onClick={() => setEditingId(null)}><BsX /></button>
+                          </div>
+                        ) : (
+                          <div className="d-flex gap-1">
+                            <button className="btn btn-sm btn-outline-secondary" onClick={() => handleStartEdit(cat)} title="Düzenle">
+                              <BsPencil />
+                            </button>
+                            <button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(cat.id)} title="Sil">
+                              <BsTrash />
+                            </button>
+                          </div>
+                        )}
+                      </td>
                     </tr>
                   ))
                 )}

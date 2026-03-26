@@ -12,6 +12,7 @@ import ManageProducts from './pages/ManageProducts';
 import ManagePrices from './pages/ManagePrices';
 import ManageOrders from './pages/ManageOrders';
 import ManageProductOptions from './pages/ManageProductOptions';
+import ManageSettings from './pages/ManageSettings';
 import './App.css';
 
 function App() {
@@ -32,6 +33,7 @@ function App() {
             <Route path="/seller/prices" element={<ProtectedRoute><ManagePrices /></ProtectedRoute>} />
             <Route path="/seller/orders" element={<ProtectedRoute><ManageOrders /></ProtectedRoute>} />
             <Route path="/seller/product-options" element={<ProtectedRoute><ManageProductOptions /></ProtectedRoute>} />
+            <Route path="/seller/settings" element={<ProtectedRoute><ManageSettings /></ProtectedRoute>} />
           </Routes>
         </main>
         <footer className="pastry-footer text-center py-4">

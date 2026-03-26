@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { BsTags, BsBox, BsCurrencyDollar, BsBoxArrowRight, BsListCheck, BsSliders } from 'react-icons/bs';
+import { BsTags, BsBox, BsCurrencyDollar, BsBoxArrowRight, BsListCheck, BsSliders, BsGearFill } from 'react-icons/bs';
 import { logout, selectCurrentUser } from '../redux/authSlice';
 
 function SellerDashboard() {
@@ -78,6 +78,17 @@ function SellerDashboard() {
                 <BsSliders size={48} className="text-gold mb-3" />
                 <h4 className="fw-bold">Ürün Seçenekleri</h4>
                 <p className="text-muted">Ürün opsiyonlarını yönet</p>
+              </div>
+            </div>
+          </Link>
+        </div>
+        <div className="col-md-4">
+          <Link to="/seller/settings" className="text-decoration-none">
+            <div className="card border-0 shadow-sm dashboard-card h-100">
+              <div className="card-body text-center py-5">
+                <BsGearFill size={48} className="text-gold mb-3" />
+                <h4 className="fw-bold">Restoran Ayarları</h4>
+                <p className="text-muted">Çalışma saatleri, iletişim ve ayarlar</p>
               </div>
             </div>
           </Link>
