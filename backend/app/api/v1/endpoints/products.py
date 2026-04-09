@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.api.dependencies import get_db, get_current_seller
-from app.db.CRUD.products import create_product, get_all_products_with_prices, get_product_by_id_with_prices, get_products
+from app.db.CRUD.products import create_product, get_all_products_with_prices, get_product_by_id_with_prices, get_products, update_product
 from app.db.CRUD.products_with_default_prices import get_products_with_default_prices
-from app.schemas.product import ProductCreate, ProductRead, ProductReadWithPrices
+from app.schemas.product import ProductCreate, ProductRead, ProductReadWithPrices, ProductUpdate
 from app.schemas.product_with_default_price import ProductWithDefaultPriceBase
 from app.models.user import User
 
@@ -27,6 +27,19 @@ def add_product(
     current_seller: User = Depends(get_current_seller),
 ):
     return create_product(db, product)
+
+
+@router.patch("/{product_id}", response_model=ProductRead)
+def patch_product(
+    product_id: int,
+    product_update: ProductUpdate,
+    db: Session = Depends(get_db),
+    current_seller: User = Depends(get_current_seller),
+):
+    product = update_product(db, product_id, product_update)
+    if product is None:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return product
 
 
 @router.get("/with_prices", response_model=list[ProductReadWithPrices])

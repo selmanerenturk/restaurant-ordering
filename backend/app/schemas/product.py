@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import Optional
 from app.schemas.product_price import ProductPriceRead
 from app.schemas.product_option import ProductOptionRead
 
@@ -11,10 +12,21 @@ class ProductBase(BaseModel):
 
 
 class ProductCreate(ProductBase):
-    pass
+    is_featured: bool = False
+
+
+class ProductUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    instock: Optional[bool] = None
+    is_featured: Optional[bool] = None
+    imageurl: Optional[str] = None
+    category_id: Optional[int] = None
+
 
 class ProductRead(ProductBase):
-    id:int
+    id: int
+    is_featured: bool = False
 
     class Config:
         from_attributes = True

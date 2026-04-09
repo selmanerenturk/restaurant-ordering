@@ -28,3 +28,9 @@ export const getOrdersCount = async (status = null) => {
   const response = await api.get('/orders/count', { params });
   return response.data;
 };
+
+export const getDailySummary = async () => {
+  const response = await api.get('/orders/daily-summary');
+  return response.data;
+};
+

@@ -30,10 +30,14 @@ const productsSlice = createSlice({
     selectedProduct: null,
     loading: false,
     error: null,
+    searchQuery: '',
   },
   reducers: {
     clearSelectedProduct: (state) => {
       state.selectedProduct = null;
+    },
+    setSearchQuery: (state, action) => {
+      state.searchQuery = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -65,5 +69,5 @@ const productsSlice = createSlice({
   },
 });
 
-export const { clearSelectedProduct } = productsSlice.actions;
+export const { clearSelectedProduct, setSearchQuery } = productsSlice.actions;
 export default productsSlice.reducer;

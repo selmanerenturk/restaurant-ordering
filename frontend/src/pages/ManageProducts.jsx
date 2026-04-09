@@ -8,7 +8,7 @@ import {
   BsPlus,
 } from 'react-icons/bs';
 import { useNavigate } from 'react-router-dom';
-import { fetchProductsWithPrices } from '../services/productService';
+import { fetchProductsWithPrices, updateProduct } from '../services/productService';
 import { fetchCategories } from '../services/categoryService';
 import {
   getProductOptions,
@@ -31,6 +31,7 @@ function ManageProducts() {
     name: '',
     description: '',
     instock: true,
+    is_featured: false,
     imageurl: '',
     category_id: '',
   });
@@ -129,6 +130,17 @@ function ManageProducts() {
     }
   };
 
+  const handleToggleFeatured = async (productId, currentValue) => {
+    try {
+      await updateProduct(productId, { is_featured: !currentValue });
+      setProducts((prev) =>
+        prev.map((p) => (p.id === productId ? { ...p, is_featured: !currentValue } : p))
+      );
+    } catch {
+      setError('Öne çıkan durumu güncellenirken hata oluştu');
+    }
+  };
+
   const handleDeleteItem = async (itemId) => {
     try {
       await deleteOptionItem(itemId);
@@ -167,7 +179,7 @@ function ManageProducts() {
         ...formData,
         category_id: parseInt(formData.category_id),
       });
-      setFormData({ name: '', description: '', instock: true, imageurl: '', category_id: '' });
+      setFormData({ name: '', description: '', instock: true, is_featured: false, imageurl: '', category_id: '' });
       setShowForm(false);
       await loadData();
     } catch (err) {
@@ -253,17 +265,31 @@ function ManageProducts() {
                   />
                 </div>
                 <div className="col-md-4 mb-3 d-flex align-items-end">
-                  <div className="form-check">
-                    <input
-                      className="form-check-input"
-                      type="checkbox"
-                      id="instockCheck"
-                      checked={formData.instock}
-                      onChange={(e) => setFormData({ ...formData, instock: e.target.checked })}
-                    />
-                    <label className="form-check-label fw-semibold" htmlFor="instockCheck">
-                      Stok durumu
-                    </label>
+                  <div className="d-flex flex-column gap-2">
+                    <div className="form-check">
+                      <input
+                        className="form-check-input"
+                        type="checkbox"
+                        id="instockCheck"
+                        checked={formData.instock}
+                        onChange={(e) => setFormData({ ...formData, instock: e.target.checked })}
+                      />
+                      <label className="form-check-label fw-semibold" htmlFor="instockCheck">
+                        Stok durumu
+                      </label>
+                    </div>
+                    <div className="form-check">
+                      <input
+                        className="form-check-input"
+                        type="checkbox"
+                        id="isFeaturedCheck"
+                        checked={formData.is_featured}
+                        onChange={(e) => setFormData({ ...formData, is_featured: e.target.checked })}
+                      />
+                      <label className="form-check-label fw-semibold" htmlFor="isFeaturedCheck">
+                        ⭐ Öne Çıkan
+                      </label>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -297,6 +323,7 @@ function ManageProducts() {
                   <th>Ürün adı</th>
                   <th>Kategorisi</th>
                   <th>Stok durumu</th>
+                  <th>Öne Çıkan</th>
                   <th>Fiyat</th>
                   <th style={{ width: '120px' }}>İşlem</th>
                 </tr>
@@ -304,7 +331,7 @@ function ManageProducts() {
               <tbody>
                 {products.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="text-center py-4 text-muted">Ürün bulunamadı</td>
+                    <td colSpan="8" className="text-center py-4 text-muted">Ürün bulunamadı</td>
                   </tr>
                 ) : (
                   products.map((prod) => (
@@ -320,6 +347,15 @@ function ManageProducts() {
                           <span className={`badge ${prod.instock ? 'bg-success' : 'bg-danger'}`}>
                             {prod.instock ? 'Evet' : 'Hayır'}
                           </span>
+                        </td>
+                        <td className="text-center">
+                          <button
+                            className={`featured-star-btn ${prod.is_featured ? 'active' : 'inactive'}`}
+                            onClick={() => handleToggleFeatured(prod.id, prod.is_featured)}
+                            title={prod.is_featured ? 'Öne çıkandan kaldır' : 'Öne çıkan yap'}
+                          >
+                            {prod.is_featured ? '⭐' : '☆'}
+                          </button>
                         </td>
                         <td>
                           {prod.prices?.map((p) => (
@@ -342,7 +378,7 @@ function ManageProducts() {
                       {/* Inline ingredient management */}
                       {expandedProductId === prod.id && (
                         <tr>
-                          <td colSpan="7" className="bg-light p-3">
+                          <td colSpan="8" className="bg-light p-3">
                             <div className="d-flex justify-content-between align-items-center mb-3">
                               <h6 className="fw-bold mb-0">{prod.name} — Malzeme Grupları</h6>
                               <button

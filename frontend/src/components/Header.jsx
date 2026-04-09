@@ -2,6 +2,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { BsBoxArrowRight, BsMoonStars } from 'react-icons/bs';
 import HeaderCart from './HeaderCart';
+import SearchBar from './SearchBar';
+import { NotificationPanel } from './NotificationPanel';
 import { selectIsAuthenticated, selectIsSeller, logout } from '../redux/authSlice';
 
 function Header() {
@@ -42,6 +44,10 @@ function Header() {
             )}
           </ul>
           <div className="d-flex align-items-center gap-2">
+            <SearchBar />
+            {isAuthenticated && isSeller && (
+              <NotificationPanel />
+            )}
             {isAuthenticated && isSeller ? (
               <button className="btn btn-outline-light btn-sm" onClick={handleLogout}>
                 <BsBoxArrowRight className="me-1" /> Çıkış yap

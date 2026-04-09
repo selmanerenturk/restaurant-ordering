@@ -1,4 +1,4 @@
-from . import user, product, category, product_price, order, order_item, order_stage, product_option, order_item_option, restaurant_settings
+from . import user, product, category, product_price, order, order_item, order_stage, product_option, order_item_option, restaurant_settings, notification, discount
 
 # Backwards compatibility for existing init_db import
 # (def_product model is not defined as a table in this project)
@@ -18,5 +18,7 @@ __all__ = [
     "order_item_option",
     "order_stage",
     "restaurant_settings",
+    "notification",
+    "discount",
     "def_product",
 ]

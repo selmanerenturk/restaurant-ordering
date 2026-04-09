@@ -11,6 +11,7 @@ class Product(Base):
     name = Column(String(100), index=True, nullable=False)
     description = Column(String)
     instock = Column(Boolean, default=True, nullable=False)
+    is_featured = Column(Boolean, default=False, nullable=False)
     imageurl = Column(String, nullable=False)
     category_id = Column(Integer,  ForeignKey('categories.id'), nullable=False)
 

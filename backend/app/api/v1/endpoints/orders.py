@@ -4,9 +4,11 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, R
 from sqlalchemy.orm import Session
 from app.api.dependencies import get_db, get_current_seller
 from app.core.config import settings
-from app.db.CRUD.orders import create_order, get_orders, get_order, update_order_status, get_orders_count
+from app.db.CRUD.orders import create_order, get_orders, get_order, update_order_status, get_orders_count, get_daily_order_summary
 from app.schemas.order import OrderCreate, OrderRead, OrderStatusUpdate
 from app.utils import send_email_smtp, verify_turnstile
+from app.services.notification_service import NotificationManager
+from app.api.v1.endpoints.websocket import broadcast_new_order_notification
 
 
 router = APIRouter()
@@ -32,6 +34,15 @@ def orders_count(
     return {"count": get_orders_count(db, status=status)}
 
 
+@router.get("/daily-summary")
+def daily_summary(
+    db: Session = Depends(get_db),
+    _seller=Depends(get_current_seller),
+):
+    """Get today's order summary: count, revenue, pending, average."""
+    return get_daily_order_summary(db)
+
+
 @router.get("/{order_id}", response_model=OrderRead)
 def read_order(
     order_id: int,
@@ -48,6 +59,7 @@ def read_order(
 def change_order_status(
     order_id: int,
     body: OrderStatusUpdate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     _seller=Depends(get_current_seller),
 ):
@@ -57,6 +69,15 @@ def change_order_status(
         raise HTTPException(status_code=422, detail=str(e))
     if order is None:
         raise HTTPException(status_code=404, detail="Order not found")
+    
+    # Trigger notification for order status change
+    NotificationManager.notify_on_order_event(
+        db=db,
+        order=order,
+        event_type="status_change",
+        background_tasks=background_tasks,
+    )
+    
     return order
 
 
@@ -107,5 +128,16 @@ def create_order_endpoint(
             subject=subject,
             body=body,
         )
+
+    # Trigger notification system for new order
+    NotificationManager.notify_on_order_event(
+        db=db,
+        order=created,
+        event_type="new_order",
+        background_tasks=background_tasks,
+    )
+
+    # Broadcast real-time WebSocket notification to admin panel
+    background_tasks.add_task(broadcast_new_order_notification, created)
 
     return created

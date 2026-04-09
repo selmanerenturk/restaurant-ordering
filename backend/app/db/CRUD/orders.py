@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, date
 from decimal import Decimal
 from typing import Optional
 from sqlalchemy.orm import Session, selectinload
-from sqlalchemy import desc
+from sqlalchemy import desc, func as sa_func
 from app.models.order import Order
 from app.models.order_item import OrderItem
 from app.models.order_item_option import OrderItemOption
@@ -15,6 +15,35 @@ from app.schemas.order import OrderCreate
 
 
 VALID_STATUSES = ["new", "confirmed", "preparing", "ready", "delivered", "cancelled", "returned"]
+PENDING_STATUSES = ["new", "confirmed", "preparing"]
+
+
+def get_daily_order_summary(db: Session) -> dict:
+    """Get today's order summary metrics in a single query."""
+    today_start = datetime.combine(date.today(), datetime.min.time())
+
+    result = db.query(
+        sa_func.count(Order.id).label("today_order_count"),
+        sa_func.coalesce(sa_func.sum(Order.total), 0).label("today_revenue"),
+        sa_func.coalesce(
+            sa_func.sum(Order.total) / sa_func.nullif(sa_func.count(Order.id), 0),
+            0,
+        ).label("avg_order_amount"),
+    ).filter(
+        Order.created_at >= today_start,
+        Order.status.notin_(["cancelled", "returned"]),
+    ).first()
+
+    pending_count = db.query(sa_func.count(Order.id)).filter(
+        Order.status.in_(PENDING_STATUSES),
+    ).scalar() or 0
+
+    return {
+        "today_order_count": result.today_order_count if result else 0,
+        "today_revenue": float(result.today_revenue) if result else 0.0,
+        "avg_order_amount": round(float(result.avg_order_amount), 2) if result else 0.0,
+        "pending_order_count": pending_count,
+    }
 
 
 def get_orders(

@@ -14,3 +14,9 @@ export const fetchProductWithPrices = async (productId) => {
   const response = await api.get(`/products/${productId}/with_prices`);
   return response.data;
 };
+
+export const updateProduct = async (productId, data) => {
+  const response = await api.patch(`/products/${productId}`, data);
+  return response.data;
+};
+
