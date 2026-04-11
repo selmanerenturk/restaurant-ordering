@@ -1,5 +1,23 @@
 import { createSlice } from '@reduxjs/toolkit';
 
+// ─── LocalStorage helpers ───
+const CART_STORAGE_KEY = 'cart_items';
+
+function loadCartFromStorage() {
+  try {
+    const raw = localStorage.getItem(CART_STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch { /* corrupted data – ignore */ }
+  return [];
+}
+
+function saveCartToStorage(items) {
+  try {
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+  } catch { /* quota exceeded – ignore */ }
+}
+
+// ─── Helpers ───
 const buildCartKey = (product_price_id, selected_options = []) => {
   const optionKeys = selected_options
     .map((o) => `${o.option_item_id}${o.is_removed ? 'r' : ''}`)
@@ -11,7 +29,7 @@ const buildCartKey = (product_price_id, selected_options = []) => {
 const cartSlice = createSlice({
   name: 'cart',
   initialState: {
-    items: [],
+    items: loadCartFromStorage(),
     isOpen: false,
   },
   reducers: {
@@ -36,9 +54,11 @@ const cartSlice = createSlice({
           selected_options,
         });
       }
+      saveCartToStorage(state.items);
     },
     removeFromCart: (state, action) => {
       state.items = state.items.filter(item => item.cartKey !== action.payload);
+      saveCartToStorage(state.items);
     },
     updateQuantity: (state, action) => {
       const { cartKey, quantity } = action.payload;
@@ -50,9 +70,11 @@ const cartSlice = createSlice({
           item.quantity = quantity;
         }
       }
+      saveCartToStorage(state.items);
     },
     clearCart: (state) => {
       state.items = [];
+      saveCartToStorage(state.items);
     },
     toggleCart: (state) => {
       state.isOpen = !state.isOpen;

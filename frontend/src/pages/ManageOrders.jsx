@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   BsArrowLeft,
@@ -15,8 +15,12 @@ import {
   BsArrowReturnLeft,
   BsBellSlash,
   BsStickyFill,
+  BsPrinter,
 } from 'react-icons/bs';
 import { getOrders, updateOrderStatus } from '../services/orderService';
+import { getRestaurantSettings } from '../services/restaurantSettingsService';
+import OrderPrintView from '../components/OrderPrintView';
+import '../components/OrderPrintView.css';
 
 const STATUS_CONFIG = {
   new: { label: 'Yeni', badge: 'bg-primary', icon: BsClockHistory },
@@ -41,6 +45,9 @@ function ManageOrders() {
   const [filterStatus, setFilterStatus] = useState('');
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [updatingId, setUpdatingId] = useState(null);
+  const [printOrder, setPrintOrder] = useState(null);
+  const [restaurantName, setRestaurantName] = useState('');
+  const printRef = useRef(null);
 
   const loadOrders = useCallback(async () => {
     try {
@@ -58,6 +65,21 @@ function ManageOrders() {
   useEffect(() => {
     loadOrders();
   }, [loadOrders]);
+
+  // Load restaurant name once for print header
+  useEffect(() => {
+    getRestaurantSettings()
+      .then((s) => setRestaurantName(s.name || 'Restoran'))
+      .catch(() => {});
+  }, []);
+
+  const handlePrint = (order) => {
+    setPrintOrder(order);
+    // Wait for React to render the hidden print view, then trigger print
+    setTimeout(() => {
+      window.print();
+    }, 100);
+  };
 
   const handleStatusChange = async (orderId, newStatus) => {
     try {
@@ -107,6 +129,7 @@ function ManageOrders() {
 
   return (
     <div className="container py-4">
+    <div className="manage-orders-screen">
       <button
         className="btn btn-link text-decoration-none mb-3 back-link"
         onClick={() => navigate('/seller/dashboard')}
@@ -223,6 +246,13 @@ function ManageOrders() {
                             >
                               <BsEye />
                             </button>
+                            <button
+                              className="btn btn-sm btn-outline-secondary"
+                              title="Yazdır"
+                              onClick={() => handlePrint(order)}
+                            >
+                              <BsPrinter />
+                            </button>
                             {nextStatus && (
                               <button
                                 className="btn btn-sm btn-gold"
@@ -280,11 +310,21 @@ function ManageOrders() {
                   <h5 className="modal-title fw-bold">
                     Sipariş #{selectedOrder.id}
                   </h5>
-                  <button
-                    type="button"
-                    className="btn-close btn-close-white"
-                    onClick={() => setSelectedOrder(null)}
-                  ></button>
+                  <div className="d-flex align-items-center gap-2">
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-light"
+                      onClick={() => handlePrint(selectedOrder)}
+                      title="Yazdır"
+                    >
+                      <BsPrinter className="me-1" /> Yazdır
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-close btn-close-white"
+                      onClick={() => setSelectedOrder(null)}
+                    ></button>
+                  </div>
                 </div>
                 <div className="modal-body">
                   {/* Status + Date */}
@@ -522,6 +562,7 @@ function ManageOrders() {
           </div>
         </>
       )}
+      </div>{/* end .manage-orders-screen */}
 
       <style>{`
         .spin-animation {
@@ -531,7 +572,16 @@ function ManageOrders() {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
+        @media print {
+          .manage-orders-screen { display: none !important; }
+          .print-receipt-wrapper { display: block !important; }
+        }
       `}</style>
+
+      {/* Hidden print container – rendered off-screen, visible only in print mode */}
+      <div className="print-receipt-wrapper" id="print-root">
+        <OrderPrintView ref={printRef} order={printOrder} restaurantName={restaurantName} />
+      </div>
     </div>
   );
 }

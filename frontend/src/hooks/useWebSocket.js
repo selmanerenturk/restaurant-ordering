@@ -6,67 +6,70 @@ import {
   setWSConnected,
 } from '../redux/notificationSlice';
 
-// Notification sound - create once globally
-let notificationAudio = null;
+// ─── Persistent AudioContext (survives re-renders) ───
+let audioCtx = null;
 
-function getNotificationAudio() {
-  if (!notificationAudio) {
-    notificationAudio = {
-      play: () => {
-        try {
-          const AudioContext = window.AudioContext || window.webkitAudioContext;
-          if (!AudioContext) return;
-
-          const ctx = new AudioContext();
-
-          // First tone - pleasant ding
-          const osc1 = ctx.createOscillator();
-          const gain1 = ctx.createGain();
-          osc1.type = 'sine';
-          osc1.frequency.setValueAtTime(830, ctx.currentTime);
-          osc1.frequency.setValueAtTime(1100, ctx.currentTime + 0.1);
-          gain1.gain.setValueAtTime(0.3, ctx.currentTime);
-          gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
-          osc1.connect(gain1);
-          gain1.connect(ctx.destination);
-          osc1.start(ctx.currentTime);
-          osc1.stop(ctx.currentTime + 0.4);
-
-          // Second tone - confirmation ding
-          const osc2 = ctx.createOscillator();
-          const gain2 = ctx.createGain();
-          osc2.type = 'sine';
-          osc2.frequency.setValueAtTime(1100, ctx.currentTime + 0.15);
-          osc2.frequency.setValueAtTime(1320, ctx.currentTime + 0.25);
-          gain2.gain.setValueAtTime(0, ctx.currentTime);
-          gain2.gain.setValueAtTime(0.3, ctx.currentTime + 0.15);
-          gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
-          osc2.connect(gain2);
-          gain2.connect(ctx.destination);
-          osc2.start(ctx.currentTime + 0.15);
-          osc2.stop(ctx.currentTime + 0.6);
-
-          // Third tone - higher alert
-          const osc3 = ctx.createOscillator();
-          const gain3 = ctx.createGain();
-          osc3.type = 'sine';
-          osc3.frequency.setValueAtTime(1320, ctx.currentTime + 0.35);
-          gain3.gain.setValueAtTime(0, ctx.currentTime);
-          gain3.gain.setValueAtTime(0.25, ctx.currentTime + 0.35);
-          gain3.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.8);
-          osc3.connect(gain3);
-          gain3.connect(ctx.destination);
-          osc3.start(ctx.currentTime + 0.35);
-          osc3.stop(ctx.currentTime + 0.8);
-
-          setTimeout(() => ctx.close(), 1000);
-        } catch (e) {
-          console.warn('Could not play notification sound:', e);
-        }
-      },
-    };
+function ensureAudioContext() {
+  if (!audioCtx || audioCtx.state === 'closed') {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    audioCtx = new AC();
   }
-  return notificationAudio;
+  // Resume if browser suspended it (autoplay policy)
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(() => {});
+  }
+  return audioCtx;
+}
+
+// Unlock AudioContext on very first user interaction (required by browsers)
+function unlockAudio() {
+  ensureAudioContext();
+  document.removeEventListener('click', unlockAudio, true);
+  document.removeEventListener('keydown', unlockAudio, true);
+  document.removeEventListener('touchstart', unlockAudio, true);
+}
+if (typeof document !== 'undefined') {
+  document.addEventListener('click', unlockAudio, true);
+  document.addEventListener('keydown', unlockAudio, true);
+  document.addEventListener('touchstart', unlockAudio, true);
+}
+
+/**
+ * Play a distinctive "new order" alert sound.
+ * Three ascending tones followed by a repeat after a short pause.
+ */
+function playNewOrderSound() {
+  try {
+    const ctx = ensureAudioContext();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+
+    const playTone = (freq, start, dur, vol = 0.35) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, start);
+      gain.gain.setValueAtTime(vol, start);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + dur);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(start);
+      osc.stop(start + dur);
+    };
+
+    // First phrase – three ascending notes
+    playTone(880, t, 0.15, 0.4);
+    playTone(1108, t + 0.16, 0.15, 0.4);
+    playTone(1320, t + 0.32, 0.25, 0.45);
+
+    // Second phrase – repeat (draws more attention)
+    playTone(880, t + 0.7, 0.15, 0.4);
+    playTone(1108, t + 0.86, 0.15, 0.4);
+    playTone(1320, t + 1.02, 0.25, 0.45);
+  } catch (e) {
+    console.warn('Could not play notification sound:', e);
+  }
 }
 
 export const useWebSocket = () => {
@@ -77,11 +80,7 @@ export const useWebSocket = () => {
   const pingInterval = useRef(null);
 
   const playNotificationSound = useCallback(() => {
-    try {
-      getNotificationAudio().play();
-    } catch (e) {
-      console.warn('Could not play notification sound:', e);
-    }
+    playNewOrderSound();
   }, []);
 
   useEffect(() => {
@@ -131,6 +130,7 @@ export const useWebSocket = () => {
                   body: data.message || 'Yeni bir sipariş alındı',
                   icon: '/vite.svg',
                   tag: `order-${data.order_id}`,
+                  requireInteraction: true,
                 });
               }
             } else if (data.type === 'notifications') {

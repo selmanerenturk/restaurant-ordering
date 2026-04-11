@@ -1,11 +1,17 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.api.dependencies import get_db, get_current_seller
-from app.db.CRUD.restaurant_settings import get_settings_as_dict, update_settings
-from app.schemas.restaurant_settings import RestaurantSettingsUpdate
+from app.db.CRUD.restaurant_settings import get_settings_as_dict, update_settings, check_restaurant_availability
+from app.schemas.restaurant_settings import RestaurantSettingsUpdate, RestaurantAvailability
 from app.models.user import User
 
 router = APIRouter()
+
+
+@router.get("/availability", response_model=RestaurantAvailability)
+def restaurant_availability(db: Session = Depends(get_db)):
+    """Public endpoint: check if the restaurant is currently open."""
+    return check_restaurant_availability(db)
 
 
 @router.get("/")

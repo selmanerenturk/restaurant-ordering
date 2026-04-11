@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   BsArrowLeft,
   BsPlusCircle,
@@ -6,9 +6,11 @@ import {
   BsChevronUp,
   BsTrash,
   BsPlus,
+  BsImage,
+  BsCloudUpload,
 } from 'react-icons/bs';
 import { useNavigate } from 'react-router-dom';
-import { fetchProductsWithPrices, updateProduct } from '../services/productService';
+import { fetchProductsWithPrices, updateProduct, uploadProductImage } from '../services/productService';
 import { fetchCategories } from '../services/categoryService';
 import {
   getProductOptions,
@@ -19,6 +21,7 @@ import {
   deleteOptionItem,
 } from '../services/productOptionService';
 import api from '../config/api';
+import ImageCropModal from '../components/ImageCropModal';
 
 function ManageProducts() {
   const navigate = useNavigate();
@@ -35,20 +38,35 @@ function ManageProducts() {
     imageurl: '',
     category_id: '',
   });
-  const [submitting, setSubmitting] = useState(false);
+    const [imageFile, setImageFile] = useState(null);
+    const [imagePreview, setImagePreview] = useState(null);
+    const [imageMode, setImageMode] = useState('upload'); // 'upload' | 'url'
+    const [submitting, setSubmitting] = useState(false);
+    const [updatingImageId, setUpdatingImageId] = useState(null);
 
-  // Ingredient management state
-  const [expandedProductId, setExpandedProductId] = useState(null);
-  const [productOptions, setProductOptions] = useState([]);
-  const [optionsLoading, setOptionsLoading] = useState(false);
+    // --- Ref to track which product we're updating (avoids stale closure) ---
+    const updatingImageIdRef = useRef(null);
+    const inlineImageInputRef = useRef(null);
 
-  const [showNewGroup, setShowNewGroup] = useState(false);
-  const [newGroup, setNewGroup] = useState({ name: '', is_required: false, allow_multiple: false });
+    // --- Crop modal state ---
+    // cropContext: 'inline' (table row image) | 'form' (create form)
+    const [cropImageSrc, setCropImageSrc] = useState(null);
+    const [cropContext, setCropContext] = useState(null);
 
-  const [addingItemToOptionId, setAddingItemToOptionId] = useState(null);
-  const [newItem, setNewItem] = useState({ name: '', extra_price: '0', is_default: false });
+    // Ingredient management state
+    const [expandedProductId, setExpandedProductId] = useState(null);
+    const [productOptions, setProductOptions] = useState([]);
+    const [optionsLoading, setOptionsLoading] = useState(false);
 
-  const loadOptions = useCallback(async (productId) => {
+    const [showNewGroup, setShowNewGroup] = useState(false);
+    const [newGroup, setNewGroup] = useState({ name: '', is_required: false, allow_multiple: false });
+
+    const [addingItemToOptionId, setAddingItemToOptionId] = useState(null);
+    const [newItem, setNewItem] = useState({ name: '', extra_price: '0', is_default: false });
+
+    // ...existing code for loadOptions, handleToggleIngredients, handleCreateGroup, handleDeleteGroup, handleAddItem, handleToggleItemAvailability, handleToggleFeatured, handleDeleteItem...
+
+    const loadOptions = useCallback(async (productId) => {
     try {
       setOptionsLoading(true);
       const data = await getProductOptions(productId);
@@ -58,9 +76,9 @@ function ManageProducts() {
     } finally {
       setOptionsLoading(false);
     }
-  }, []);
+    }, []);
 
-  const handleToggleIngredients = async (productId) => {
+    const handleToggleIngredients = async (productId) => {
     if (expandedProductId === productId) {
       setExpandedProductId(null);
       setProductOptions([]);
@@ -72,9 +90,9 @@ function ManageProducts() {
     setShowNewGroup(false);
     setAddingItemToOptionId(null);
     await loadOptions(productId);
-  };
+    };
 
-  const handleCreateGroup = async (e) => {
+    const handleCreateGroup = async (e) => {
     e.preventDefault();
     if (!newGroup.name.trim() || !expandedProductId) return;
     try {
@@ -91,9 +109,9 @@ function ManageProducts() {
     } catch (err) {
       setError(err.response?.data?.detail || 'Grup oluşturulurken hata oluştu');
     }
-  };
+    };
 
-  const handleDeleteGroup = async (optionId) => {
+    const handleDeleteGroup = async (optionId) => {
     if (!window.confirm('Bu grubu ve tüm malzemelerini silmek istediğinize emin misiniz?')) return;
     try {
       await deleteOption(optionId);
@@ -101,9 +119,9 @@ function ManageProducts() {
     } catch {
       setError('Grup silinirken hata oluştu');
     }
-  };
+    };
 
-  const handleAddItem = async (e, optionId) => {
+    const handleAddItem = async (e, optionId) => {
     e.preventDefault();
     if (!newItem.name.trim()) return;
     try {
@@ -119,18 +137,18 @@ function ManageProducts() {
     } catch (err) {
       setError(err.response?.data?.detail || 'Malzeme eklenirken hata oluştu');
     }
-  };
+    };
 
-  const handleToggleItemAvailability = async (itemId, currentValue) => {
+    const handleToggleItemAvailability = async (itemId, currentValue) => {
     try {
       await updateOptionItem(itemId, { is_available: !currentValue });
       await loadOptions(expandedProductId);
     } catch {
       setError('Durum güncellenirken hata oluştu');
     }
-  };
+    };
 
-  const handleToggleFeatured = async (productId, currentValue) => {
+    const handleToggleFeatured = async (productId, currentValue) => {
     try {
       await updateProduct(productId, { is_featured: !currentValue });
       setProducts((prev) =>
@@ -139,18 +157,102 @@ function ManageProducts() {
     } catch {
       setError('Öne çıkan durumu güncellenirken hata oluştu');
     }
-  };
+    };
 
-  const handleDeleteItem = async (itemId) => {
+    const handleDeleteItem = async (itemId) => {
     try {
       await deleteOptionItem(itemId);
       await loadOptions(expandedProductId);
     } catch {
       setError('Malzeme silinirken hata oluştu');
     }
-  };
+    };
 
-  const loadData = async () => {
+    // ─── Inline image update (table row click) ───────────────────────────
+    const handleInlineImageClick = (productId) => {
+    updatingImageIdRef.current = productId;   // ← ref set synchronously
+    setUpdatingImageId(productId);
+    if (inlineImageInputRef.current) {
+      inlineImageInputRef.current.value = '';
+      inlineImageInputRef.current.click();
+    }
+    };
+
+    const handleInlineImageChange = (e) => {
+    const file = e.target.files[0];
+    const targetId = updatingImageIdRef.current;   // ← read from ref, never stale
+    if (!file || !targetId) {
+      setUpdatingImageId(null);
+      updatingImageIdRef.current = null;
+      return;
+    }
+    // Convert to data-url and open crop modal
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropImageSrc(reader.result);
+      setCropContext('inline');
+    };
+    reader.readAsDataURL(file);
+    };
+
+    // ─── Create-form image select → crop ────────────────────────────────
+    const handleImageFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropImageSrc(reader.result);
+      setCropContext('form');
+    };
+    reader.readAsDataURL(file);
+    };
+
+    // ─── Crop confirm handler (both contexts) ───────────────────────────
+    const handleCropConfirm = async (croppedBlob) => {
+    const context = cropContext;
+    // Close crop modal immediately
+    setCropImageSrc(null);
+    setCropContext(null);
+
+    if (context === 'inline') {
+      // Upload cropped blob, then PATCH product
+      const targetId = updatingImageIdRef.current;
+      if (!targetId) return;
+      try {
+        const file = new File([croppedBlob], `crop_${targetId}.jpg`, { type: 'image/jpeg' });
+        const uploadResult = await uploadProductImage(file);
+        await updateProduct(targetId, { imageurl: uploadResult.imageurl });
+        setProducts((prev) =>
+          prev.map((p) =>
+            p.id === targetId ? { ...p, imageurl: uploadResult.imageurl } : p
+          )
+        );
+      } catch (err) {
+        setError(err.response?.data?.detail || 'Görsel güncellenirken hata oluştu');
+      } finally {
+        setUpdatingImageId(null);
+        updatingImageIdRef.current = null;
+      }
+    } else if (context === 'form') {
+      // Store the cropped blob for submission later
+      const file = new File([croppedBlob], 'cropped.jpg', { type: 'image/jpeg' });
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(croppedBlob));
+      setFormData((prev) => ({ ...prev, imageurl: '' }));
+    }
+    };
+
+    const handleCropCancel = () => {
+    setCropImageSrc(null);
+    setCropContext(null);
+    if (cropContext === 'inline') {
+      setUpdatingImageId(null);
+      updatingImageIdRef.current = null;
+    }
+    };
+
+    // ─── Data loading ───────────────────────────────────────────────────
+    const loadData = async () => {
     try {
       setLoading(true);
       const [productsData, categoriesData] = await Promise.all([
@@ -165,21 +267,39 @@ function ManageProducts() {
     } finally {
       setLoading(false);
     }
-  };
+    };
 
-  useEffect(() => {
+    useEffect(() => {
     loadData();
-  }, []);
+    }, []);
 
-  const handleSubmit = async (e) => {
+    const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       setSubmitting(true);
+
+      let imageurl = formData.imageurl;
+
+      // If a file was selected (already cropped), upload it first
+      if (imageMode === 'upload' && imageFile) {
+        const uploadResult = await uploadProductImage(imageFile);
+        imageurl = uploadResult.imageurl;
+      }
+
+      if (!imageurl) {
+        setError('Lütfen bir görsel yükleyin veya URL girin.');
+        setSubmitting(false);
+        return;
+      }
+
       await api.post('/products/', {
         ...formData,
+        imageurl,
         category_id: parseInt(formData.category_id),
       });
       setFormData({ name: '', description: '', instock: true, is_featured: false, imageurl: '', category_id: '' });
+      setImageFile(null);
+      setImagePreview(null);
       setShowForm(false);
       await loadData();
     } catch (err) {
@@ -187,12 +307,12 @@ function ManageProducts() {
     } finally {
       setSubmitting(false);
     }
-  };
+    };
 
-  const getCategoryName = (catId) => {
+    const getCategoryName = (catId) => {
     const cat = categories.find((c) => c.id === catId);
     return cat ? cat.name : catId;
-  };
+    };
 
   return (
     <div className="container py-4">
@@ -235,7 +355,7 @@ function ManageProducts() {
                     onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
                     required
                   >
-                    <option value="">Select category</option>
+                    <option value="">Kategori seçin</option>
                     {categories.map((cat) => (
                       <option key={cat.id} value={cat.id}>{cat.name}</option>
                     ))}
@@ -254,15 +374,82 @@ function ManageProducts() {
               </div>
               <div className="row">
                 <div className="col-md-8 mb-3">
-                  <label className="form-label fw-semibold">Görsel URL *</label>
-                  <input
-                    type="url"
-                    className="form-control"
-                    value={formData.imageurl}
-                    onChange={(e) => setFormData({ ...formData, imageurl: e.target.value })}
-                    placeholder="https://..."
-                    required
-                  />
+                  <label className="form-label fw-semibold">Ürün Görseli *</label>
+                  <div className="d-flex gap-2 mb-2">
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${imageMode === 'upload' ? 'btn-gold' : 'btn-outline-secondary'}`}
+                      onClick={() => setImageMode('upload')}
+                    >
+                      <BsCloudUpload className="me-1" /> Dosya Yükle
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${imageMode === 'url' ? 'btn-gold' : 'btn-outline-secondary'}`}
+                      onClick={() => setImageMode('url')}
+                    >
+                      <BsImage className="me-1" /> URL Gir
+                    </button>
+                  </div>
+
+                  {imageMode === 'upload' ? (
+                    <div>
+                      <label
+                        htmlFor="imageFileInput"
+                        className="d-flex flex-column align-items-center justify-content-center border border-2 border-dashed rounded p-4 text-center"
+                        style={{ cursor: 'pointer', minHeight: '120px', borderColor: '#ccc', background: '#fafafa' }}
+                      >
+                        {imagePreview ? (
+                          <div className="position-relative">
+                            <img
+                              src={imagePreview}
+                              alt="Önizleme"
+                              className="rounded"
+                              style={{ maxWidth: '200px', maxHeight: '120px', objectFit: 'cover' }}
+                            />
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-danger position-absolute top-0 end-0"
+                              style={{ transform: 'translate(30%, -30%)' }}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setImageFile(null);
+                                setImagePreview(null);
+                              }}
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <BsCloudUpload size={32} className="text-muted mb-2" />
+                            <span className="text-muted">Görsel yüklemek için tıklayın</span>
+                            <small className="text-muted">JPG, PNG, GIF, WebP, SVG • Maks 5MB</small>
+                          </>
+                        )}
+                      </label>
+                      <input
+                        type="file"
+                        id="imageFileInput"
+                        className="d-none"
+                        accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
+                        onChange={handleImageFileChange}
+                      />
+                    </div>
+                  ) : (
+                    <input
+                      type="url"
+                      className="form-control"
+                      value={formData.imageurl}
+                      onChange={(e) => {
+                        setFormData({ ...formData, imageurl: e.target.value });
+                        setImageFile(null);
+                        setImagePreview(null);
+                      }}
+                      placeholder="https://..."
+                    />
+                  )}
                 </div>
                 <div className="col-md-4 mb-3 d-flex align-items-end">
                   <div className="d-flex flex-column gap-2">
@@ -298,7 +485,7 @@ function ManageProducts() {
                   {submitting ? 'Oluşturuluyor...' : 'Ürün oluştur'}
                 </button>
                 <button type="button" className="btn btn-outline-secondary" onClick={() => setShowForm(false)}>
-                  Cancel
+                  İptal
                 </button>
               </div>
             </form>
@@ -339,7 +526,40 @@ function ManageProducts() {
                       <tr>
                         <td>{prod.id}</td>
                         <td>
-                          <img src={prod.imageurl} alt={prod.name} className="rounded" style={{ width: '40px', height: '40px', objectFit: 'cover' }} />
+                          <div
+                            className="position-relative d-inline-block"
+                            style={{ cursor: 'pointer', width: '48px', height: '48px' }}
+                            onClick={() => handleInlineImageClick(prod.id)}
+                            title="Görseli değiştirmek için tıklayın"
+                          >
+                            <img
+                              src={prod.imageurl}
+                              alt={prod.name}
+                              className="rounded"
+                              style={{ width: '48px', height: '48px', objectFit: 'cover' }}
+                            />
+                            {updatingImageId === prod.id ? (
+                              <div
+                                className="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center rounded"
+                                style={{ background: 'rgba(0,0,0,0.55)' }}
+                              >
+                                <div className="spinner-border spinner-border-sm text-white" role="status" />
+                              </div>
+                            ) : (
+                              <div
+                                className="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center rounded"
+                                style={{
+                                  background: 'rgba(0,0,0,0.45)',
+                                  transition: 'opacity 0.2s',
+                                  opacity: 0,
+                                }}
+                                onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+                                onMouseLeave={(e) => (e.currentTarget.style.opacity = '0')}
+                              >
+                                <BsCloudUpload className="text-white" size={16} />
+                              </div>
+                            )}
+                          </div>
                         </td>
                         <td className="fw-semibold">{prod.name}</td>
                         <td>{getCategoryName(prod.category_id)}</td>
@@ -567,6 +787,26 @@ function ManageProducts() {
             </table>
           </div>
         </div>
+      )}
+
+      {/* Hidden file input for inline image update */}
+      <input
+        type="file"
+        ref={inlineImageInputRef}
+        className="d-none"
+        accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
+        onChange={handleInlineImageChange}
+      />
+
+      {/* ── Image Crop Modal ── */}
+      {cropImageSrc && (
+        <ImageCropModal
+          imageSrc={cropImageSrc}
+          aspect={1}
+          outputSize={{ width: 600, height: 600 }}
+          onConfirm={handleCropConfirm}
+          onCancel={handleCropCancel}
+        />
       )}
     </div>
   );

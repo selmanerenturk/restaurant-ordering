@@ -4,6 +4,7 @@ import cartReducer from './cartSlice';
 import orderReducer from './orderSlice';
 import authReducer from './authSlice';
 import notificationReducer from './notificationSlice';
+import restaurantReducer from './restaurantSlice';
 
 const store = configureStore({
   reducer: {
@@ -12,6 +13,7 @@ const store = configureStore({
     order: orderReducer,
     auth: authReducer,
     notifications: notificationReducer,
+    restaurant: restaurantReducer,
   },
 });
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BsArrowLeft, BsShop, BsClock, BsTelephone, BsGeoAlt, BsImage } from 'react-icons/bs';
+import { BsArrowLeft, BsShop, BsClock, BsTelephone, BsGeoAlt, BsImage, BsClipboard, BsXCircle, BsCheckCircle } from 'react-icons/bs';
 import { useNavigate } from 'react-router-dom';
 import { getRestaurantSettings, updateRestaurantSettings } from '../services/restaurantSettingsService';
 
@@ -11,6 +11,13 @@ const DAYS = [
   { key: 'friday', label: 'Cuma' },
   { key: 'saturday', label: 'Cumartesi' },
   { key: 'sunday', label: 'Pazar' },
+];
+
+const PRESETS = [
+  { label: '09:00 – 22:00', open: '09:00', close: '22:00' },
+  { label: '10:00 – 23:00', open: '10:00', close: '23:00' },
+  { label: '08:00 – 20:00', open: '08:00', close: '20:00' },
+  { label: '11:00 – 00:00', open: '11:00', close: '00:00' },
 ];
 
 function ManageSettings() {
@@ -231,34 +238,106 @@ function ManageSettings() {
         {/* Çalışma Saatleri */}
         <div className="col-12">
           <div className="card border-0 shadow-sm">
-            <div className="card-header bg-dark-brown text-white d-flex align-items-center gap-2">
-              <BsClock />
-              <h5 className="mb-0 fw-bold">Çalışma Saatleri</h5>
+            <div className="card-header bg-dark-brown text-white d-flex align-items-center justify-content-between">
+              <div className="d-flex align-items-center gap-2">
+                <BsClock />
+                <h5 className="mb-0 fw-bold">Çalışma Saatleri</h5>
+              </div>
             </div>
             <div className="card-body">
+              {/* Quick Presets */}
+              <div className="mb-3">
+                <label className="form-label fw-semibold small text-muted mb-2">Hızlı Şablon (Tüm Günlere Uygula)</label>
+                <div className="d-flex flex-wrap gap-2">
+                  {PRESETS.map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      className="btn btn-outline-secondary btn-sm"
+                      onClick={() => {
+                        setSettings((prev) => {
+                          const updated = { ...prev };
+                          DAYS.forEach((d) => {
+                            updated[d.key] = { open: preset.open, close: preset.close };
+                          });
+                          return updated;
+                        });
+                      }}
+                    >
+                      <BsClock className="me-1" /> {preset.label}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    className="btn btn-outline-danger btn-sm"
+                    onClick={() => {
+                      setSettings((prev) => {
+                        const updated = { ...prev };
+                        DAYS.forEach((d) => {
+                          updated[d.key] = { open: null, close: null };
+                        });
+                        return updated;
+                      });
+                    }}
+                  >
+                    <BsXCircle className="me-1" /> Tümünü Kapat
+                  </button>
+                </div>
+              </div>
+
+              <hr />
+
+              {/* Per-day rows */}
               <div className="table-responsive">
                 <table className="table table-hover mb-0 align-middle">
                   <thead className="table-light">
                     <tr>
-                      <th style={{ width: '150px' }}>Gün</th>
+                      <th style={{ width: '140px' }}>Gün</th>
+                      <th style={{ width: '80px' }} className="text-center">Açık</th>
                       <th>Açılış</th>
                       <th>Kapanış</th>
-                      <th style={{ width: '100px' }}>Durum</th>
+                      <th style={{ width: '100px' }} className="text-center">Kopyala</th>
                     </tr>
                   </thead>
                   <tbody>
                     {DAYS.map((d) => {
                       const dayData = settings[d.key] || {};
-                      const isClosed = !dayData.open && !dayData.close;
+                      const isDayOpen = !!(dayData.open && dayData.close);
                       return (
-                        <tr key={d.key}>
+                        <tr key={d.key} className={!isDayOpen ? 'table-light text-muted' : ''}>
                           <td className="fw-semibold">{d.label}</td>
+                          <td className="text-center">
+                            <div className="form-check form-switch d-flex justify-content-center mb-0">
+                              <input
+                                type="checkbox"
+                                className="form-check-input"
+                                role="switch"
+                                checked={isDayOpen}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    // Default to 09:00-22:00 when toggling on
+                                    updateDayTime(d.key, 'open', '09:00');
+                                    setSettings((prev) => ({
+                                      ...prev,
+                                      [d.key]: { open: '09:00', close: '22:00' },
+                                    }));
+                                  } else {
+                                    setSettings((prev) => ({
+                                      ...prev,
+                                      [d.key]: { open: null, close: null },
+                                    }));
+                                  }
+                                }}
+                              />
+                            </div>
+                          </td>
                           <td>
                             <input
                               type="time"
                               className="form-control form-control-sm"
                               style={{ maxWidth: '140px' }}
                               value={dayData.open || ''}
+                              disabled={!isDayOpen}
                               onChange={(e) => updateDayTime(d.key, 'open', e.target.value)}
                             />
                           </td>
@@ -268,14 +347,33 @@ function ManageSettings() {
                               className="form-control form-control-sm"
                               style={{ maxWidth: '140px' }}
                               value={dayData.close || ''}
+                              disabled={!isDayOpen}
                               onChange={(e) => updateDayTime(d.key, 'close', e.target.value)}
                             />
                           </td>
-                          <td>
-                            {isClosed ? (
-                              <span className="badge bg-danger">Kapalı</span>
-                            ) : (
-                              <span className="badge bg-success">Açık</span>
+                          <td className="text-center">
+                            {isDayOpen && (
+                              <button
+                                type="button"
+                                className="btn btn-outline-secondary btn-sm"
+                                title="Bu saatleri diğer günlere kopyala"
+                                onClick={() => {
+                                  setSettings((prev) => {
+                                    const updated = { ...prev };
+                                    DAYS.forEach((otherDay) => {
+                                      if (otherDay.key !== d.key) {
+                                        updated[otherDay.key] = {
+                                          open: dayData.open,
+                                          close: dayData.close,
+                                        };
+                                      }
+                                    });
+                                    return updated;
+                                  });
+                                }}
+                              >
+                                <BsClipboard />
+                              </button>
                             )}
                           </td>
                         </tr>
@@ -285,7 +383,8 @@ function ManageSettings() {
                 </table>
               </div>
               <p className="text-muted small mt-2 mb-0">
-                Saatleri boş bırakarak o günü kapalı olarak ayarlayabilirsiniz.
+                <BsCheckCircle className="me-1 text-success" />
+                Açık/Kapalı düğmesiyle günleri hızlıca ayarlayabilirsiniz. Kopyala düğmesiyle bir günün saatlerini diğer günlere uygulayabilirsiniz.
               </p>
             </div>
           </div>

@@ -1,6 +1,5 @@
 from pydantic import BaseModel
 from typing import Optional
-import datetime
 
 
 class WorkingHours(BaseModel):
@@ -46,3 +45,10 @@ class RestaurantSettingsUpdate(BaseModel):
 
     is_temporarily_closed: Optional[bool] = None
     temporary_close_message: Optional[str] = None
+
+
+class RestaurantAvailability(BaseModel):
+    is_open: bool
+    reason: Optional[str] = None
+    next_open_time: Optional[str] = None  # e.g. "Pazartesi 09:00"
+

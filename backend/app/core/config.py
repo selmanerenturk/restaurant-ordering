@@ -45,6 +45,9 @@ class Settings(BaseSettings):
     NOTIFICATION_RETRY_ATTEMPTS: int = 3
     NOTIFICATION_RETRY_DELAY_SECONDS: int = 5
 
+    # Restaurant timezone (IANA format)
+    RESTAURANT_TIMEZONE: str = "Europe/Istanbul"
+
     @property
     def DATABASE_URL(self) -> str:
         return (

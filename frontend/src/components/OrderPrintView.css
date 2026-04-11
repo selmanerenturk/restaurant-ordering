@@ -1,0 +1,320 @@
+/* ═══════════════════════════════════════════
+   OrderPrintView  –  screen (hidden) + print
+   Optimised for 80 mm thermal & A4
+   ═══════════════════════════════════════════ */
+
+/* ── On-screen: the receipt lives in a hidden wrapper ── */
+.print-receipt-wrapper {
+  display: none;
+}
+
+/* ── Print mode ── */
+@media print {
+  /* Hide the main app chrome (header, footer, nav, etc.) */
+  .app-wrapper > .pastry-navbar,
+  .app-wrapper > .pastry-footer,
+  .app-wrapper > .main-content .manage-orders-screen,
+  .offcanvas,
+  .offcanvas-backdrop,
+  .modal-backdrop {
+    display: none !important;
+  }
+
+  .print-receipt-wrapper {
+    display: block !important;
+  }
+
+  /* Reset page */
+  @page {
+    margin: 4mm;
+  }
+
+  .print-receipt {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    line-height: 1.4;
+    color: #000;
+    width: 72mm;          /* fits 80 mm roll after margins */
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 0;
+  }
+
+  /* Header */
+  .receipt-header {
+    text-align: center;
+    margin-bottom: 2mm;
+  }
+  .receipt-shop-name {
+    font-size: 16px;
+    font-weight: 900;
+    margin: 0 0 1mm;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .receipt-order-id {
+    font-size: 18px;
+    font-weight: 900;
+    margin: 1mm 0;
+  }
+  .receipt-date {
+    font-size: 11px;
+    margin: 0;
+  }
+  .receipt-status {
+    font-size: 13px;
+    font-weight: 700;
+    margin: 1mm 0 0;
+    text-transform: uppercase;
+    border: 1px solid #000;
+    display: inline-block;
+    padding: 0.5mm 3mm;
+  }
+
+  /* Divider */
+  .receipt-divider {
+    text-align: center;
+    font-size: 10px;
+    line-height: 1;
+    margin: 2mm 0;
+    overflow: hidden;
+    white-space: nowrap;
+    color: #000;
+  }
+
+  /* Sections */
+  .receipt-section p {
+    margin: 0.5mm 0;
+    font-size: 11px;
+  }
+  .receipt-warning {
+    font-weight: 900;
+    font-size: 13px !important;
+    border: 2px solid #000;
+    text-align: center;
+    padding: 1mm;
+    margin-top: 1mm !important;
+  }
+  .receipt-note-label {
+    font-weight: 900;
+    font-size: 12px !important;
+  }
+  .receipt-note {
+    font-size: 12px !important;
+    font-weight: 700;
+  }
+
+  /* Items table */
+  .receipt-items {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+  }
+  .receipt-items th {
+    border-bottom: 1px dashed #000;
+    font-weight: 700;
+    padding: 1mm 0;
+    text-align: left;
+  }
+  .receipt-item-qty-col,
+  .receipt-item-qty {
+    text-align: center;
+    width: 24px;
+  }
+  .receipt-item-price-col,
+  .receipt-item-price {
+    text-align: right;
+    width: 60px;
+    white-space: nowrap;
+  }
+  .receipt-item-row td {
+    padding: 1.5mm 0;
+    vertical-align: top;
+    border-bottom: 1px dotted #ccc;
+  }
+  .receipt-item-name {
+    font-weight: 600;
+  }
+  .receipt-opt-line {
+    display: block;
+    font-weight: 400;
+    font-size: 10px;
+    padding-left: 2mm;
+  }
+  .receipt-opt-removed {
+    text-decoration: line-through;
+  }
+  .receipt-opt-extra {
+    font-style: italic;
+  }
+
+  /* Totals */
+  .receipt-totals {
+    font-size: 12px;
+  }
+  .receipt-total-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5mm 0;
+  }
+  .receipt-grand-total {
+    font-size: 15px;
+    font-weight: 900;
+    border-top: 2px solid #000;
+    padding-top: 1.5mm;
+    margin-top: 1mm;
+  }
+
+  /* Footer */
+  .receipt-footer {
+    text-align: center;
+    font-size: 12px;
+    margin-top: 3mm;
+    font-weight: 700;
+  }
+}
+
+/* ═══════════════════════════════════════════
+   Screen preview  (inside the modal before print)
+   ─ mirrors the thermal look so the seller
+     can check before pressing ⌘P
+   ═══════════════════════════════════════════ */
+.print-preview-box {
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 20px 16px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #000;
+  max-width: 340px;
+  margin: 0 auto;
+}
+
+.print-preview-box .receipt-header {
+  text-align: center;
+  margin-bottom: 6px;
+}
+.print-preview-box .receipt-shop-name {
+  font-size: 16px;
+  font-weight: 900;
+  margin: 0 0 2px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.print-preview-box .receipt-order-id {
+  font-size: 18px;
+  font-weight: 900;
+  margin: 2px 0;
+}
+.print-preview-box .receipt-date {
+  font-size: 11px;
+  margin: 0;
+  color: #555;
+}
+.print-preview-box .receipt-status {
+  font-size: 13px;
+  font-weight: 700;
+  margin: 2px 0 0;
+  text-transform: uppercase;
+  border: 1px solid #000;
+  display: inline-block;
+  padding: 1px 8px;
+}
+.print-preview-box .receipt-divider {
+  text-align: center;
+  font-size: 10px;
+  line-height: 1;
+  margin: 6px 0;
+  overflow: hidden;
+  white-space: nowrap;
+  color: #aaa;
+}
+.print-preview-box .receipt-section p {
+  margin: 1px 0;
+  font-size: 11px;
+}
+.print-preview-box .receipt-warning {
+  font-weight: 900;
+  font-size: 13px !important;
+  border: 2px solid #000;
+  text-align: center;
+  padding: 2px;
+  margin-top: 4px !important;
+}
+.print-preview-box .receipt-note-label {
+  font-weight: 900;
+}
+.print-preview-box .receipt-note {
+  font-weight: 700;
+}
+.print-preview-box .receipt-items {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+.print-preview-box .receipt-items th {
+  border-bottom: 1px dashed #000;
+  font-weight: 700;
+  padding: 2px 0;
+  text-align: left;
+}
+.print-preview-box .receipt-item-qty-col,
+.print-preview-box .receipt-item-qty {
+  text-align: center;
+  width: 24px;
+}
+.print-preview-box .receipt-item-price-col,
+.print-preview-box .receipt-item-price {
+  text-align: right;
+  width: 60px;
+  white-space: nowrap;
+}
+.print-preview-box .receipt-item-row td {
+  padding: 4px 0;
+  vertical-align: top;
+  border-bottom: 1px dotted #ccc;
+}
+.print-preview-box .receipt-item-name {
+  font-weight: 600;
+}
+.print-preview-box .receipt-opt-line {
+  display: block;
+  font-weight: 400;
+  font-size: 10px;
+  padding-left: 6px;
+}
+.print-preview-box .receipt-opt-removed {
+  text-decoration: line-through;
+  color: #c00;
+}
+.print-preview-box .receipt-opt-extra {
+  font-style: italic;
+  color: #080;
+}
+.print-preview-box .receipt-totals {
+  font-size: 12px;
+}
+.print-preview-box .receipt-total-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 1px 0;
+}
+.print-preview-box .receipt-grand-total {
+  font-size: 15px;
+  font-weight: 900;
+  border-top: 2px solid #000;
+  padding-top: 4px;
+  margin-top: 2px;
+}
+.print-preview-box .receipt-footer {
+  text-align: center;
+  font-size: 12px;
+  margin-top: 8px;
+  font-weight: 700;
+}
+
+

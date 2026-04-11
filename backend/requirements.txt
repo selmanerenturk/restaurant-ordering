@@ -25,8 +25,9 @@ passlib[bcrypt]==1.7.4
 bcrypt==4.0.1
 httpx
 twilio==9.3.0
-python-multipart==0.0.6
+python-multipart==0.0.26
 aioredis==2.0.1
 aiosmtplib==3.0.1
+tzdata>=2024.1
 
 

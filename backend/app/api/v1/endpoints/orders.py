@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.api.dependencies import get_db, get_current_seller
 from app.core.config import settings
 from app.db.CRUD.orders import create_order, get_orders, get_order, update_order_status, get_orders_count, get_daily_order_summary
+from app.db.CRUD.restaurant_settings import check_restaurant_availability
 from app.schemas.order import OrderCreate, OrderRead, OrderStatusUpdate
 from app.utils import send_email_smtp, verify_turnstile
 from app.services.notification_service import NotificationManager
@@ -88,6 +89,10 @@ def create_order_endpoint(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
+    # Enforce restaurant availability (temporary closure + working hours)
+    availability = check_restaurant_availability(db)
+    if not availability["is_open"]:
+        raise HTTPException(status_code=403, detail=availability["reason"])
 
     try:
         created = create_order(

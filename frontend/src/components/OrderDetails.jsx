@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { BsArrowLeft, BsTrash, BsCheckCircle, BsBellSlash, BsBell } from 'react-icons/bs';
+import { BsArrowLeft, BsTrash, BsCheckCircle, BsBellSlash, BsBell, BsExclamationTriangleFill, BsClock } from 'react-icons/bs';
 import { selectCartItems, selectCartTotal, removeFromCart, clearCart } from '../redux/cartSlice';
 import { submitOrder, resetOrder } from '../redux/orderSlice';
+import { selectRestaurantOpen, selectRestaurantReason, selectRestaurantNextOpen } from '../redux/restaurantSlice';
 
 function OrderDetails() {
   const dispatch = useDispatch();
@@ -11,6 +12,9 @@ function OrderDetails() {
   const cartItems = useSelector(selectCartItems);
   const cartTotal = useSelector(selectCartTotal);
   const { loading, error, success, currentOrder } = useSelector((state) => state.order);
+  const isOpen = useSelector(selectRestaurantOpen);
+  const closedReason = useSelector(selectRestaurantReason);
+  const nextOpen = useSelector(selectRestaurantNextOpen);
 
   const [formData, setFormData] = useState({
     full_name: '',
@@ -423,20 +427,35 @@ function OrderDetails() {
                   </div>
                 )}
 
-                <button
-                  type="submit"
-                  className="btn btn-gold btn-lg w-100 fw-bold mt-3"
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                      Sipariş veriliyor...
-                    </>
-                  ) : (
-                    'Sipariş ver'
-                  )}
-                </button>
+                {!isOpen ? (
+                  <div className="alert alert-danger border-0 shadow-sm d-flex align-items-start gap-3 mt-3" role="alert">
+                    <BsExclamationTriangleFill size={22} className="text-danger flex-shrink-0 mt-1" />
+                    <div>
+                      <h6 className="alert-heading fw-bold mb-1">Sipariş Alınamıyor</h6>
+                      <p className="mb-1">{closedReason}</p>
+                      {nextOpen && (
+                        <p className="mb-0 d-flex align-items-center gap-1">
+                          <BsClock /> <strong>Bir sonraki açılış:</strong> {nextOpen}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="submit"
+                    className="btn btn-gold btn-lg w-100 fw-bold mt-3"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                        Sipariş veriliyor...
+                      </>
+                    ) : (
+                      'Sipariş ver'
+                    )}
+                  </button>
+                )}
               </form>
             </div>
           </div>
