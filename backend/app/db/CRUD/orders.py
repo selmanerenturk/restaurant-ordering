@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, date
 from decimal import Decimal
+import secrets
 from typing import Optional
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import desc, func as sa_func
@@ -66,6 +67,15 @@ def get_order(db: Session, order_id: int) -> Optional[Order]:
         db.query(Order)
         .options(selectinload(Order.items).selectinload(OrderItem.selected_options))
         .filter(Order.id == order_id)
+        .first()
+    )
+
+
+def get_order_by_tracking_token(db: Session, tracking_token: str) -> Optional[Order]:
+    return (
+        db.query(Order)
+        .options(selectinload(Order.items).selectinload(OrderItem.selected_options))
+        .filter(Order.tracking_token == tracking_token)
         .first()
     )
 
@@ -182,6 +192,16 @@ def create_order(db: Session, order_in: OrderCreate, *, client_ip: str | None, t
     delivery_fee = Decimal("0.00")
     total = (subtotal + delivery_fee).quantize(Decimal("0.01"))
 
+    tracking_token = None
+    for _ in range(5):
+        candidate = secrets.token_urlsafe(24)
+        exists = db.query(Order.id).filter(Order.tracking_token == candidate).first()
+        if not exists:
+            tracking_token = candidate
+            break
+    if not tracking_token:
+        raise ValueError("Could not generate a unique tracking token")
+
     order = Order(
         status="confirmed",
         currency_code="TRY",
@@ -203,6 +223,7 @@ def create_order(db: Session, order_in: OrderCreate, *, client_ip: str | None, t
         do_not_ring_bell=order_in.do_not_ring_bell,
         client_ip=client_ip,
         turnstile_verified_at=turnstile_verified_at,
+        tracking_token=tracking_token,
         items=order_items,
     )
 

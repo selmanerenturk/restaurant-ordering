@@ -7,6 +7,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import HomePage from './pages/HomePage';
 import ProductPage from './pages/ProductPage';
 import OrderPage from './pages/OrderPage';
+import CustomerOrderTrackingPage from './pages/CustomerOrderTrackingPage';
 import LoginPage from './pages/LoginPage';
 import SellerDashboard from './pages/SellerDashboard';
 import ManageCategories from './pages/ManageCategories';
@@ -39,6 +40,7 @@ function AppContent() {
           <Route path="/" element={<HomePage />} />
           <Route path="/product/:productId" element={<ProductPage />} />
           <Route path="/order" element={<OrderPage />} />
+          <Route path="/track/:trackingToken" element={<CustomerOrderTrackingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/seller/dashboard" element={<ProtectedRoute><SellerDashboard /></ProtectedRoute>} />
           <Route path="/seller/categories" element={<ProtectedRoute><ManageCategories /></ProtectedRoute>} />

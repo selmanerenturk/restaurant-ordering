@@ -34,3 +34,8 @@ export const getDailySummary = async () => {
   return response.data;
 };
 
+export const getOrderByTrackingToken = async (trackingToken) => {
+  const response = await api.get(`/orders/track/${trackingToken}`);
+  return response.data;
+};
+

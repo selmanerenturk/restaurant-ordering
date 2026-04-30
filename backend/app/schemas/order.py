@@ -141,6 +141,7 @@ class OrderRead(BaseModel):
     do_not_ring_bell: bool
 
     created_at: datetime
+    tracking_url: str | None = None
 
     items: list[OrderItemRead]
 
@@ -158,3 +159,19 @@ class OrderStatusUpdate(BaseModel):
         if v not in valid:
             raise ValueError(f"Invalid status. Must be one of: {valid}")
         return v
+
+
+class OrderTrackingRead(BaseModel):
+    id: int
+    status: str
+    total: Decimal
+    currency_code: str
+    full_name: str
+    delivery_type: str
+    created_at: datetime
+    tracking_url: str | None = None
+    items: list[OrderItemRead]
+
+    class Config:
+        from_attributes = True
+
