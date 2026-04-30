@@ -113,18 +113,6 @@ function OrderDetails() {
               <p className="fs-5 mb-4">
                 Total: <strong>{parseFloat(currentOrder.total).toFixed(2)} {currentOrder.currency_code}</strong>
               </p>
-              {currentOrder.tracking_url && (
-                <p className="mb-4">
-                  <a
-                    href={currentOrder.tracking_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="btn btn-outline-primary"
-                  >
-                    Siparisimi Takip Et
-                  </a>
-                </p>
-              )}
               <p className="text-muted mb-4">Siparişiniz için teşekkür ederiz. En kısa zamanda hazırlamaya başlayacağız.</p>
               <button className="btn btn-gold btn-lg" onClick={handleBackToHome}>
                 Alışverişe devam et

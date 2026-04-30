@@ -1,15 +1,15 @@
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 from app.api.dependencies import get_db, get_current_seller
 from app.core.config import settings
-from app.db.CRUD.orders import create_order, get_orders, get_order, get_order_by_tracking_token, update_order_status, get_orders_count, get_daily_order_summary
+from app.db.CRUD.orders import create_order, get_orders, get_order, update_order_status, get_orders_count, get_daily_order_summary
 from app.db.CRUD.restaurant_settings import check_restaurant_availability
-from app.schemas.order import OrderCreate, OrderRead, OrderStatusUpdate, OrderTrackingRead
+from app.schemas.order import OrderCreate, OrderRead, OrderStatusUpdate
 from app.utils import send_email_smtp, verify_turnstile
 from app.services.notification_service import NotificationManager
-from app.api.v1.endpoints.websocket import broadcast_new_order_notification, broadcast_order_tracking_update
+from app.api.v1.endpoints.websocket import broadcast_new_order_notification
 
 
 router = APIRouter()
@@ -56,18 +56,6 @@ def read_order(
     return order
 
 
-@router.get("/track/{tracking_token}", response_model=OrderTrackingRead)
-def read_order_by_tracking_token(
-    tracking_token: str,
-    db: Session = Depends(get_db),
-):
-    """Public, token-protected endpoint for customer order tracking."""
-    order = get_order_by_tracking_token(db, tracking_token)
-    if order is None:
-        raise HTTPException(status_code=404, detail="Tracking link not found")
-    return order
-
-
 @router.patch("/{order_id}/status", response_model=OrderRead)
 def change_order_status(
     order_id: int,
@@ -83,16 +71,13 @@ def change_order_status(
     if order is None:
         raise HTTPException(status_code=404, detail="Order not found")
     
-    # Trigger notification for order status changes and delivery completion
-    event_type = "delivery_completed" if order.status == "delivered" else "status_change"
+    # Trigger notification for order status change
     NotificationManager.notify_on_order_event(
         db=db,
         order=order,
-        event_type=event_type,
+        event_type="status_change",
         background_tasks=background_tasks,
     )
-
-    background_tasks.add_task(broadcast_order_tracking_update, order)
     
     return order
 
@@ -114,7 +99,7 @@ def create_order_endpoint(
             db,
             order_in,
             client_ip=request.client.host if request.client else None,
-            turnstile_verified_at=datetime.now(UTC),
+            turnstile_verified_at=datetime.utcnow(),
         )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
@@ -159,6 +144,5 @@ def create_order_endpoint(
 
     # Broadcast real-time WebSocket notification to admin panel
     background_tasks.add_task(broadcast_new_order_notification, created)
-    background_tasks.add_task(broadcast_order_tracking_update, created)
 
     return created

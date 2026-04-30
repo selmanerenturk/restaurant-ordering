@@ -136,38 +136,3 @@ def get_pending_notifications(db: Session, limit: int = 10) -> List[Notification
         Notification.status == NotificationStatus.PENDING
     ).order_by(Notification.created_at).limit(limit).all()
 
-
-def update_notification_status_by_twilio_sid(
-    db: Session,
-    message_sid: str,
-    twilio_status: str,
-    error_code: Optional[str] = None,
-    error_message: Optional[str] = None,
-) -> Optional[Notification]:
-    """Update notification status using Twilio MessageSid callback payload."""
-    notification = db.query(Notification).filter(
-        Notification.twilio_message_sid == message_sid
-    ).first()
-
-    if not notification:
-        return None
-
-    normalized_status = (twilio_status or "").lower()
-    if normalized_status in {"failed", "undelivered"}:
-        notification.status = NotificationStatus.FAILED
-        notification.error_message = error_message or f"Twilio status: {twilio_status}"
-    elif normalized_status in {"queued", "accepted", "scheduled", "sending", "sent", "delivered", "read"}:
-        notification.status = NotificationStatus.SENT
-        if not notification.sent_at:
-            from datetime import UTC, datetime
-            notification.sent_at = datetime.now(UTC)
-
-    if error_code:
-        base_error = notification.error_message or ""
-        notification.error_message = (base_error + f" (Twilio code: {error_code})").strip()
-
-    db.commit()
-    db.refresh(notification)
-    return notification
-
-

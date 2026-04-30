@@ -36,13 +36,10 @@ class Settings(BaseSettings):
     TWILIO_AUTH_TOKEN: str | None = None
     TWILIO_PHONE_NUMBER: str | None = None
     TWILIO_WHATSAPP_NUMBER: str | None = None
-    TWILIO_STATUS_CALLBACK_URL: str | None = None
-    TWILIO_VALIDATE_WEBHOOK_SIGNATURE: bool = False
 
     # Notification Settings
     ENABLE_SMS_NOTIFICATIONS: bool = False
     ENABLE_WHATSAPP_NOTIFICATIONS: bool = False
-    ENABLE_CUSTOMER_WHATSAPP_NOTIFICATIONS: bool = False
     ENABLE_VOICE_NOTIFICATIONS: bool = False
     ENABLE_EMAIL_NOTIFICATIONS: bool = True
     NOTIFICATION_RETRY_ATTEMPTS: int = 3
@@ -50,7 +47,6 @@ class Settings(BaseSettings):
 
     # Restaurant timezone (IANA format)
     RESTAURANT_TIMEZONE: str = "Europe/Istanbul"
-    CUSTOMER_APP_BASE_URL: str = "http://localhost:5173"
 
     @property
     def DATABASE_URL(self) -> str:

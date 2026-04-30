@@ -1,7 +1,7 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
 from sqlalchemy.orm import Session
 import logging
-from datetime import UTC, datetime
+from datetime import datetime
 
 from app.api.dependencies import get_db
 from app.db.CRUD.notifications import get_notifications, get_unread_notification_count
@@ -53,72 +53,23 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 
-class OrderTrackingConnectionManager:
-    """Manage WebSocket connections per order tracking token."""
-
-    def __init__(self):
-        self.connections_by_token: dict[str, list[WebSocket]] = {}
-
-    async def connect(self, tracking_token: str, websocket: WebSocket):
-        await websocket.accept()
-        self.connections_by_token.setdefault(tracking_token, []).append(websocket)
-
-    def disconnect(self, tracking_token: str, websocket: WebSocket):
-        token_connections = self.connections_by_token.get(tracking_token, [])
-        if websocket in token_connections:
-            token_connections.remove(websocket)
-        if not token_connections and tracking_token in self.connections_by_token:
-            self.connections_by_token.pop(tracking_token, None)
-
-    async def broadcast(self, tracking_token: str, message: dict):
-        disconnected: list[WebSocket] = []
-        for connection in self.connections_by_token.get(tracking_token, []):
-            try:
-                await connection.send_json(message)
-            except Exception as e:
-                logger.error(f"Error broadcasting order tracking message: {e}")
-                disconnected.append(connection)
-
-        for conn in disconnected:
-            self.disconnect(tracking_token, conn)
-
-
-order_tracking_manager = OrderTrackingConnectionManager()
-
-
 async def broadcast_new_order_notification(order) -> None:
     """Broadcast a new order notification to all connected WebSocket clients.
     Called from the order creation endpoint."""
     notification_data = {
         "type": "notification",
-        "id": f"ws-{order.id}-{datetime.now(UTC).timestamp()}",
+        "id": f"ws-{order.id}-{datetime.utcnow().timestamp()}",
         "order_id": order.id,
         "channel": "panel",
         "status": "sent",
-        "message": f"Yeni siparis #{order.id} - {order.full_name} - {order.total} TRY",
-        "created_at": datetime.now(UTC).isoformat(),
+        "message": f"🆕 Yeni sipariş #{order.id} - {order.full_name} - {order.total} TRY",
+        "created_at": datetime.utcnow().isoformat(),
         "is_read": False,
         "subject": f"Yeni Sipariş #{order.id}",
         "play_sound": True,
     }
     await manager.broadcast(notification_data)
     logger.info(f"Broadcasted new order notification for order #{order.id} to {len(manager.active_connections)} clients")
-
-
-async def broadcast_order_tracking_update(order) -> None:
-    """Broadcast updates to customers subscribed via tracking token."""
-    if not getattr(order, "tracking_token", None):
-        return
-
-    payload = {
-        "type": "order_update",
-        "order_id": order.id,
-        "status": order.status,
-        "total": float(order.total),
-        "currency_code": order.currency_code,
-        "updated_at": datetime.now(UTC).isoformat(),
-    }
-    await order_tracking_manager.broadcast(order.tracking_token, payload)
 
 
 @router.websocket("/ws/notifications")
@@ -163,21 +114,4 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
         manager.disconnect(websocket)
-
-
-@router.websocket("/ws/orders/{tracking_token}")
-async def order_tracking_websocket(websocket: WebSocket, tracking_token: str):
-    """Customer websocket endpoint for order tracking updates."""
-    await order_tracking_manager.connect(tracking_token, websocket)
-    try:
-        while True:
-            data = await websocket.receive_text()
-            if data == "ping":
-                await websocket.send_json({"type": "pong"})
-    except WebSocketDisconnect:
-        order_tracking_manager.disconnect(tracking_token, websocket)
-    except Exception as e:
-        logger.error(f"Order tracking websocket error: {e}")
-        order_tracking_manager.disconnect(tracking_token, websocket)
-
 

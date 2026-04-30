@@ -2,7 +2,6 @@ from sqlalchemy import Column, Integer, String, Boolean, Numeric, DateTime, Fore
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base import Base
-from app.core.config import settings
 
 
 class Order(Base):
@@ -36,16 +35,8 @@ class Order(Base):
     turnstile_verified_at = Column(DateTime(timezone=True))
 
     stage_id = Column(Integer, ForeignKey("order_stages.id"), nullable=True)
-    tracking_token = Column(String(128), unique=True, nullable=True, index=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
     stage = relationship("OrderStage", back_populates="orders")
-
-    @property
-    def tracking_url(self) -> str | None:
-        if not self.tracking_token:
-            return None
-        return f"{settings.CUSTOMER_APP_BASE_URL.rstrip('/')}/track/{self.tracking_token}"
-

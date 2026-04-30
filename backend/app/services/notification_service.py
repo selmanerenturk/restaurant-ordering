@@ -1,8 +1,6 @@
 import asyncio
 import logging
-import re
-from urllib.parse import urlparse
-from datetime import UTC, datetime
+from datetime import datetime, time
 from typing import Optional
 from fastapi import BackgroundTasks
 from sqlalchemy.orm import Session
@@ -17,43 +15,6 @@ logger = logging.getLogger(__name__)
 
 class NotificationService:
     """Service for handling all notification operations"""
-
-    @staticmethod
-    def normalize_phone_number(phone: str) -> str:
-        """Normalize phone number to E.164-like format for Twilio usage."""
-        cleaned = re.sub(r"[^\d+]", "", (phone or "").strip())
-        if cleaned.startswith("+"):
-            return cleaned
-
-        digits = re.sub(r"\D", "", cleaned)
-        if digits.startswith("0") and len(digits) == 11:
-            # Local TR form (05xxxxxxxxx) -> +90xxxxxxxxxx
-            return "+90" + digits[1:]
-        if len(digits) == 10:
-            # Bare TR GSM form (5xxxxxxxxx) -> +90xxxxxxxxxx
-            return "+90" + digits
-        return "+" + digits if digits else ""
-
-    @staticmethod
-    def normalize_whatsapp_address(phone: str) -> str:
-        raw = (phone or "").strip()
-        if raw.startswith("whatsapp:"):
-            return raw
-        normalized = NotificationService.normalize_phone_number(raw)
-        return f"whatsapp:{normalized}" if normalized else ""
-
-    @staticmethod
-    def is_valid_twilio_callback_url(url: str | None) -> bool:
-        """Twilio requires a real HTTP(S) callback URL; localhost is rejected."""
-        if not url:
-            return False
-        parsed = urlparse(url)
-        if parsed.scheme not in {"http", "https"}:
-            return False
-        host = (parsed.hostname or "").lower()
-        if host in {"localhost", "127.0.0.1", "0.0.0.0", "::1"}:
-            return False
-        return True
     
     @staticmethod
     def get_notification_preference(db: Session) -> Optional[NotificationPreference]:
@@ -114,7 +75,7 @@ class NotificationService:
     @staticmethod
     async def send_whatsapp_notification(
         phone: str,
-        message: str,
+        message: str
     ) -> tuple[bool, Optional[str]]:
         """Send WhatsApp message via Twilio"""
         if not settings.TWILIO_ACCOUNT_SID or not settings.TWILIO_AUTH_TOKEN or not settings.TWILIO_WHATSAPP_NUMBER:
@@ -125,22 +86,10 @@ class NotificationService:
             from twilio.rest import Client
             client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
             
-            from_address = NotificationService.normalize_whatsapp_address(settings.TWILIO_WHATSAPP_NUMBER)
-            to_address = NotificationService.normalize_whatsapp_address(phone)
-
-            if not from_address or not to_address:
-                return False, "Invalid WhatsApp sender or recipient number"
-
-            payload = {
-                "body": message,
-                "from_": from_address,
-                "to": to_address,
-            }
-            if NotificationService.is_valid_twilio_callback_url(settings.TWILIO_STATUS_CALLBACK_URL):
-                payload["status_callback"] = settings.TWILIO_STATUS_CALLBACK_URL
-
             message_obj = client.messages.create(
-                **payload
+                body=message,
+                from_=f"whatsapp:{settings.TWILIO_WHATSAPP_NUMBER}",
+                to=f"whatsapp:{phone}"
             )
             
             logger.info(f"WhatsApp sent successfully. SID: {message_obj.sid}")
@@ -272,41 +221,29 @@ class NotificationManager:
                     )
                 
                 elif notification.channel == NotificationChannel.SMS:
-                    success, response_value = await NotificationService.send_sms_notification(
+                    success, external_id = await NotificationService.send_sms_notification(
                         phone=notification.recipient,
                         message=notification.message,
                     )
-                    if success:
-                        external_id = response_value
-                        notification.twilio_message_sid = external_id
-                    else:
-                        error_message = response_value
+                    notification.twilio_message_sid = external_id
                 
                 elif notification.channel == NotificationChannel.WHATSAPP:
-                    success, response_value = await NotificationService.send_whatsapp_notification(
+                    success, external_id = await NotificationService.send_whatsapp_notification(
                         phone=notification.recipient,
                         message=notification.message,
                     )
-                    if success:
-                        external_id = response_value
-                        notification.twilio_message_sid = external_id
-                    else:
-                        error_message = response_value
+                    notification.twilio_message_sid = external_id
                 
                 elif notification.channel == NotificationChannel.VOICE:
-                    success, response_value = await NotificationService.send_voice_notification(
+                    success, external_id = await NotificationService.send_voice_notification(
                         phone=notification.recipient,
                         message=notification.message,
                     )
-                    if success:
-                        external_id = response_value
-                        notification.twilio_call_sid = external_id
-                    else:
-                        error_message = response_value
+                    notification.twilio_call_sid = external_id
                 
                 if success:
                     notification.status = NotificationStatus.SENT
-                    notification.sent_at = datetime.now(UTC)
+                    notification.sent_at = datetime.utcnow()
                     notification.retry_count = 0
                 else:
                     raise Exception(error_message or "Failed to send notification")
@@ -371,34 +308,16 @@ class NotificationManager:
         
         if prefs.enable_voice and prefs.admin_phone and settings.ENABLE_VOICE_NOTIFICATIONS:
             channels_to_send.append((NotificationChannel.VOICE, prefs.admin_phone))
-
-        # Customer-facing WhatsApp updates for order lifecycle events
-        if (
-            settings.ENABLE_CUSTOMER_WHATSAPP_NOTIFICATIONS
-            and settings.ENABLE_WHATSAPP_NOTIFICATIONS
-            and order.phone
-            and event_type in {"new_order", "status_change", "delivery_completed"}
-        ):
-            customer_message = NotificationManager.prepare_customer_notification_message(order, event_type)
-            channels_to_send.append((NotificationChannel.WHATSAPP, order.phone, customer_message))
         
         # Create notifications and schedule sending
-        for channel_data in channels_to_send:
-            if len(channel_data) == 3:
-                channel, recipient, message_override = channel_data
-                subject_override = None
-            else:
-                channel, recipient = channel_data
-                message_override = message
-                subject_override = subject
-
+        for channel, recipient in channels_to_send:
             notification = NotificationManager.create_notification(
                 db=db,
                 order_id=order.id,
                 channel=channel,
                 recipient=recipient,
-                message=message_override,
-                subject=subject_override,
+                message=message,
+                subject=subject,
             )
             # Add async task to send notification
             background_tasks.add_task(
@@ -406,32 +325,6 @@ class NotificationManager:
                 db,
                 notification.id,
             )
-
-    @staticmethod
-    def prepare_customer_notification_message(order: Order, event_type: str) -> str:
-        """Prepare Turkish customer-facing WhatsApp notification message."""
-        tracking_line = f"Siparis takibi: {order.tracking_url}" if order.tracking_url else ""
-        if event_type == "new_order":
-            return "\n".join(filter(None, [
-                f"Merhaba {order.full_name}, siparisiniz alindi. "
-                f"Siparis No: #{order.id}, Tutar: {order.total} TRY.",
-                tracking_line,
-            ]))
-        if event_type == "status_change":
-            return "\n".join(filter(None, [
-                f"Siparisinizin durumu guncellendi. "
-                f"Siparis No: #{order.id}, Yeni Durum: {order.status}.",
-                tracking_line,
-            ]))
-        if event_type == "delivery_completed":
-            return "\n".join(filter(None, [
-                f"Siparisiniz teslim edildi. Afiyet olsun! Siparis No: #{order.id}.",
-                tracking_line,
-            ]))
-        return "\n".join(filter(None, [
-            f"Siparisinizle ilgili bir guncelleme var. Siparis No: #{order.id}.",
-            tracking_line,
-        ]))
     
     @staticmethod
     def prepare_notification_message(order: Order, event_type: str) -> tuple[str, str]:
