@@ -48,6 +48,9 @@ class Settings(BaseSettings):
     # Restaurant timezone (IANA format)
     RESTAURANT_TIMEZONE: str = "Europe/Istanbul"
 
+    # Database SSL (set to True in production/Render, False for local dev)
+    DB_SSL_REQUIRE: bool = True
+
     @property
     def DATABASE_URL(self) -> str:
         return (
