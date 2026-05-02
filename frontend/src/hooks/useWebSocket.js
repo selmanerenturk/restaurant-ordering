@@ -86,9 +86,15 @@ export const useWebSocket = () => {
   useEffect(() => {
     const connectWebSocket = () => {
       try {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const host = window.location.host;
-        const wsUrl = `${protocol}//${host}/ws/notifications`;
+        let wsUrl;
+        if (import.meta.env.VITE_API_URL) {
+          const wsBase = import.meta.env.VITE_API_URL.replace(/^http/, 'ws');
+          wsUrl = `${wsBase}/ws/notifications`;
+        } else {
+          const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+          const host = window.location.host;
+          wsUrl = `${protocol}//${host}/ws/notifications`;
+        }
 
         console.log('Connecting to WebSocket:', wsUrl);
         ws.current = new WebSocket(wsUrl);
