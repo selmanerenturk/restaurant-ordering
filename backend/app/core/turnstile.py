@@ -9,6 +9,10 @@ async def verify_turnstile(token: str) -> bool:
     if not settings.TURNSTILE_SECRET_KEY:
         return True  # skip verification if no key configured
 
+    # Fallback token sent when the widget fails to load on the client
+    if not token or token == "turnstile-unavailable":
+        return True
+
     async with httpx.AsyncClient() as client:
         response = await client.post(
             TURNSTILE_VERIFY_URL,

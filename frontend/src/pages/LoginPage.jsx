@@ -46,6 +46,8 @@ function LoginPage() {
 
   const [loginTurnstileToken, setLoginTurnstileToken] = useState(null);
   const [regTurnstileToken, setRegTurnstileToken] = useState(null);
+  const [loginTurnstileError, setLoginTurnstileError] = useState(false);
+  const [regTurnstileError, setRegTurnstileError] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated && isSeller) {
@@ -90,11 +92,11 @@ function LoginPage() {
   const handleLogin = (e) => {
     e.preventDefault();
     if (!validateLogin()) return;
-    if (!loginTurnstileToken) {
+    if (!loginTurnstileToken && !loginTurnstileError) {
         setLoginErrors((prev) => ({ ...prev, turnstileToken: 'Please complete the reCAPTCHA' }));
         return;
     }
-    dispatch(login({ email: loginEmail, password: loginPassword, turnstileToken: loginTurnstileToken }));
+    dispatch(login({ email: loginEmail, password: loginPassword, turnstileToken: loginTurnstileToken || 'turnstile-unavailable' }));
     setLoginTurnstileToken(null);
   };
 
@@ -127,11 +129,11 @@ function LoginPage() {
   const handleRegister = (e) => {
     e.preventDefault();
     if (!validateRegister()) return;
-    if (!regTurnstileToken) {
+    if (!regTurnstileToken && !regTurnstileError) {
         setRegErrors((prev) => ({ ...prev, turnstile: 'Please complete the CAPTCHA' }));
         return;
     }
-    dispatch(register({ formData: regForm, turnstileToken: regTurnstileToken }));
+    dispatch(register({ formData: regForm, turnstileToken: regTurnstileToken || 'turnstile-unavailable' }));
     setRegTurnstileToken(null);
   };
 
@@ -210,10 +212,18 @@ function LoginPage() {
                       siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
                       onSuccess={(token) => {
                           setLoginTurnstileToken(token);
+                          setLoginTurnstileError(false);
                           setLoginErrors((prev) => ({ ...prev, turnstileToken: null }));
                           }}
                       onExpire={() => setLoginTurnstileToken(null)}
+                      onError={() => {
+                          setLoginTurnstileError(true);
+                          setLoginTurnstileToken(null);
+                      }}
                       />
+                      {loginTurnstileError && (
+                          <div className="text-warning small mt-1">⚠️ CAPTCHA yüklenemedi. Yine de giriş yapabilirsiniz.</div>
+                      )}
                       {loginErrors.turnstile && (
                           <div className="text-danger small mt-1">{loginErrors.turnstile}</div>
                           )}
@@ -314,10 +324,18 @@ function LoginPage() {
                       siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
                       onSuccess={(token) => {
                        setRegTurnstileToken(token);
+                       setRegTurnstileError(false);
                        setRegErrors((prev) => ({...prev, turnstileToken: null}))
                       }}
                       onExpire={() => setRegTurnstileToken(null)}
+                      onError={() => {
+                          setRegTurnstileError(true);
+                          setRegTurnstileToken(null);
+                      }}
                       />
+                      {regTurnstileError && (
+                          <div className="text-warning small mt-1">⚠️ CAPTCHA yüklenemedi. Yine de devam edebilirsiniz.</div>
+                      )}
                       {regErrors.turnstile && <div className="text-danger small mt-1">{regErrors.turnstile}</div>}
                   </div>
 
