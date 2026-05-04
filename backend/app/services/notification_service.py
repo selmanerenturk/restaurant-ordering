@@ -73,6 +73,22 @@ class NotificationService:
             return False, str(e)
     
     @staticmethod
+    def normalize_phone_e164(phone: str, default_country_code: str = "90") -> str:
+        """Convert phone number to E.164 format (e.g. 05321234567 → +905321234567)."""
+        p = phone.strip().replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+        if p.startswith("+"):
+            return p  # already E.164
+        if p.startswith("00"):
+            return "+" + p[2:]
+        if p.startswith("0") and len(p) == 11:
+            # Turkish local format: 0XXXXXXXXXX → +90XXXXXXXXX
+            return f"+{default_country_code}{p[1:]}"
+        if len(p) == 10:
+            # No leading 0: XXXXXXXXXX → +90XXXXXXXXXX
+            return f"+{default_country_code}{p}"
+        return f"+{p}"
+
+    @staticmethod
     async def send_whatsapp_notification(
         phone: str,
         message: str
@@ -90,9 +106,11 @@ class NotificationService:
             raw_from = settings.TWILIO_WHATSAPP_NUMBER.strip()
             from_number = raw_from if raw_from.startswith("whatsapp:") else f"whatsapp:{raw_from}"
 
-            # Normalize to_number
-            raw_to = phone.strip()
-            to_number = raw_to if raw_to.startswith("whatsapp:") else f"whatsapp:{raw_to}"
+            # Normalize to_number to E.164 then add whatsapp: prefix
+            normalized = NotificationService.normalize_phone_e164(phone)
+            to_number = f"whatsapp:{normalized}"
+
+            logger.info(f"Sending WhatsApp from {from_number} to {to_number}")
 
             message_obj = client.messages.create(
                 body=message,

@@ -100,6 +100,7 @@ function OrderDetails() {
   };
 
   if (success && currentOrder) {
+    const trackingUrl = `/order/track/${currentOrder.id}`;
     return (
       <div className="container py-5">
         <div className="row justify-content-center">
@@ -108,12 +109,29 @@ function OrderDetails() {
               <BsCheckCircle size={64} className="text-success mx-auto mb-3" />
               <h2 className="fw-bold mb-3">Siparişiniz onaylandı!</h2>
               <p className="fs-5 mb-2">
-                Order ID: <strong>#{currentOrder.id}</strong>
+                Sipariş No: <strong>#{currentOrder.id}</strong>
               </p>
               <p className="fs-5 mb-4">
-                Total: <strong>{parseFloat(currentOrder.total).toFixed(2)} {currentOrder.currency_code}</strong>
+                Toplam: <strong>{parseFloat(currentOrder.total).toFixed(2)} {currentOrder.currency_code}</strong>
               </p>
               <p className="text-muted mb-4">Siparişiniz için teşekkür ederiz. En kısa zamanda hazırlamaya başlayacağız.</p>
+
+              {/* Tracking link */}
+              <div className="alert alert-success d-flex flex-column align-items-center gap-2 mb-4">
+                <strong>📦 Siparişinizi takip edin</strong>
+                <a
+                  href={trackingUrl}
+                  className="btn btn-outline-success btn-sm"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Sipariş Takip Sayfası →
+                </a>
+                <small className="text-muted">
+                  Takip linki WhatsApp üzerinden de gönderildi.
+                </small>
+              </div>
+
               <button className="btn btn-gold btn-lg" onClick={handleBackToHome}>
                 Alışverişe devam et
               </button>

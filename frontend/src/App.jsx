@@ -16,6 +16,7 @@ import ManageOrders from './pages/ManageOrders';
 import ManageProductOptions from './pages/ManageProductOptions';
 import ManageDiscounts from './pages/ManageDiscounts';
 import ManageSettings from './pages/ManageSettings';
+import TrackOrderPage from './pages/TrackOrderPage';
 import { fetchAvailability } from './redux/restaurantSlice';
 import './App.css';
 
@@ -39,6 +40,7 @@ function AppContent() {
           <Route path="/" element={<HomePage />} />
           <Route path="/product/:productId" element={<ProductPage />} />
           <Route path="/order" element={<OrderPage />} />
+          <Route path="/order/track/:orderId" element={<TrackOrderPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/seller/dashboard" element={<ProtectedRoute><SellerDashboard /></ProtectedRoute>} />
           <Route path="/seller/categories" element={<ProtectedRoute><ManageCategories /></ProtectedRoute>} />

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
@@ -8,11 +8,27 @@ from app.db.CRUD.orders import create_order, get_orders, get_order, update_order
 from app.db.CRUD.restaurant_settings import check_restaurant_availability
 from app.schemas.order import OrderCreate, OrderRead, OrderStatusUpdate
 from app.utils import send_email_smtp, verify_turnstile
-from app.services.notification_service import NotificationManager
+from app.services.notification_service import NotificationManager, NotificationService
 from app.api.v1.endpoints.websocket import broadcast_new_order_notification
 
 
 router = APIRouter()
+
+
+# ── Public: order tracking (no auth needed) ──────────────────────────────────
+
+class OrderTrackRead(OrderRead):
+    """Slim public view — same fields as OrderRead, just re-exported for clarity."""
+    pass
+
+
+@router.get("/track/{order_id}", response_model=OrderTrackRead)
+def track_order(order_id: int, db: Session = Depends(get_db)):
+    """Public endpoint: customer can look up their order status by ID."""
+    order = get_order(db, order_id)
+    if order is None:
+        raise HTTPException(status_code=404, detail="Sipariş bulunamadı")
+    return order
 
 
 @router.get("/", response_model=list[OrderRead])
@@ -78,6 +94,28 @@ def change_order_status(
         event_type="status_change",
         background_tasks=background_tasks,
     )
+
+    # Send customer WhatsApp status update
+    if settings.ENABLE_CUSTOMER_WHATSAPP_NOTIFICATIONS:
+        tracking_url = f"{settings.CUSTOMER_APP_BASE_URL}/order/track/{order.id}"
+        status_labels = {
+            "confirmed": "Onaylandı ✅",
+            "preparing": "Hazırlanıyor 👨‍🍳",
+            "ready": "Hazır / Yolda 🚀",
+            "delivered": "Teslim Edildi 🎉",
+            "cancelled": "İptal Edildi ❌",
+        }
+        label = status_labels.get(order.status, order.status)
+        customer_msg = (
+            f"Merhaba {order.full_name}! Siparişinizin durumu güncellendi.\n\n"
+            f"Sipariş #{order.id} → {label}\n\n"
+            f"Takip linki: {tracking_url}"
+        )
+        background_tasks.add_task(
+            NotificationService.send_whatsapp_notification,
+            order.phone,
+            customer_msg,
+        )
     
     return order
 
@@ -99,7 +137,7 @@ def create_order_endpoint(
             db,
             order_in,
             client_ip=request.client.host if request.client else None,
-            turnstile_verified_at=datetime.utcnow(),
+            turnstile_verified_at=datetime.now(timezone.utc),
         )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
@@ -134,13 +172,28 @@ def create_order_endpoint(
             body=body,
         )
 
-    # Trigger notification system for new order
+    # Admin notification (WhatsApp / SMS / email via preferences)
     NotificationManager.notify_on_order_event(
         db=db,
         order=created,
         event_type="new_order",
         background_tasks=background_tasks,
     )
+
+    # Customer WhatsApp confirmation with tracking link
+    if settings.ENABLE_CUSTOMER_WHATSAPP_NOTIFICATIONS:
+        tracking_url = f"{settings.CUSTOMER_APP_BASE_URL}/order/track/{created.id}"
+        customer_msg = (
+            f"Merhaba {created.full_name}! 🎉\n\n"
+            f"Siparişiniz alındı. Sipariş numaranız: #{created.id}\n"
+            f"Toplam: {created.total} TRY\n\n"
+            f"Siparişinizi takip etmek için:\n{tracking_url}"
+        )
+        background_tasks.add_task(
+            NotificationService.send_whatsapp_notification,
+            created.phone,
+            customer_msg,
+        )
 
     # Broadcast real-time WebSocket notification to admin panel
     background_tasks.add_task(broadcast_new_order_notification, created)
