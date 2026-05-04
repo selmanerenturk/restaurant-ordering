@@ -1,19 +1,36 @@
 import os
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from app.api.v1.router import api_router
 from app.core.config import settings
 
-app = FastAPI(title=settings.PROJECT_NAME)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Auto-create any missing tables/columns on startup
+    from app.db.init_db import init_db
+    init_db()
+    yield
+
+
+app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 
 # CORS Middleware
+# Note: allow_origins must list specific origins (not "*") when allow_credentials=True
+ALLOWED_ORIGINS = [
+    "https://restaurant-ordering-sage.vercel.app",
+    "http://localhost:5173",
+    "http://localhost:3000",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods
-    allow_headers=["*"],  # Allows all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Ensure uploads directory exists and serve static files
