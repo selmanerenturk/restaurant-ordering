@@ -85,11 +85,19 @@ class NotificationService:
         try:
             from twilio.rest import Client
             client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
-            
+
+            # Normalize from_number — strip existing whatsapp: prefix to avoid doubling
+            raw_from = settings.TWILIO_WHATSAPP_NUMBER.strip()
+            from_number = raw_from if raw_from.startswith("whatsapp:") else f"whatsapp:{raw_from}"
+
+            # Normalize to_number
+            raw_to = phone.strip()
+            to_number = raw_to if raw_to.startswith("whatsapp:") else f"whatsapp:{raw_to}"
+
             message_obj = client.messages.create(
                 body=message,
-                from_=f"whatsapp:{settings.TWILIO_WHATSAPP_NUMBER}",
-                to=f"whatsapp:{phone}"
+                from_=from_number,
+                to=to_number,
             )
             
             logger.info(f"WhatsApp sent successfully. SID: {message_obj.sid}")

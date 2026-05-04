@@ -17,6 +17,7 @@ class NotificationStatus(str, enum.Enum):
     """Notification delivery status"""
     PENDING = "pending"
     SENT = "sent"
+    DELIVERED = "delivered"
     FAILED = "failed"
     RETRYING = "retrying"
     ACKNOWLEDGED = "acknowledged"
