@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { BsMoonStars, BsPersonPlus } from 'react-icons/bs';
+import { Turnstile } from '@marsidev/react-turnstile';
 import {
   login,
   register,
@@ -43,8 +44,8 @@ function LoginPage() {
   const [regForm, setRegForm] = useState(initialRegForm);
   const [regErrors, setRegErrors] = useState({});
 
-  const [loginTurnstileToken, setLoginTurnstileToken] = useState('bypass');
-  const [regTurnstileToken, setRegTurnstileToken] = useState('bypass');
+  const [loginTurnstileToken, setLoginTurnstileToken] = useState(null);
+  const [regTurnstileToken, setRegTurnstileToken] = useState(null);
 
   useEffect(() => {
     if (isAuthenticated && isSeller) {
@@ -89,7 +90,12 @@ function LoginPage() {
   const handleLogin = (e) => {
     e.preventDefault();
     if (!validateLogin()) return;
-    dispatch(login({ email: loginEmail, password: loginPassword, turnstileToken: 'bypass' }));
+    if (!loginTurnstileToken) {
+      setLoginErrors((prev) => ({ ...prev, turnstile: 'Lütfen CAPTCHA doğrulamasını tamamlayınız' }));
+      return;
+    }
+    dispatch(login({ email: loginEmail, password: loginPassword, turnstileToken: loginTurnstileToken }));
+    setLoginTurnstileToken(null);
   };
 
   // --- Register ---
@@ -121,7 +127,12 @@ function LoginPage() {
   const handleRegister = (e) => {
     e.preventDefault();
     if (!validateRegister()) return;
-    dispatch(register({ formData: regForm, turnstileToken: 'bypass' }));
+    if (!regTurnstileToken) {
+      setRegErrors((prev) => ({ ...prev, turnstile: 'Lütfen CAPTCHA doğrulamasını tamamlayınız' }));
+      return;
+    }
+    dispatch(register({ formData: regForm, turnstileToken: regTurnstileToken }));
+    setRegTurnstileToken(null);
   };
 
   const fieldClass = (err) => `form-control${err ? ' is-invalid' : ''}`;
@@ -194,7 +205,15 @@ function LoginPage() {
                       placeholder="Şifrenizi giriniz"
                     />
                     {loginErrors.password && <div className="invalid-feedback">{loginErrors.password}</div>}
-
+                  </div>
+                  <div className="mb-3">
+                    <Turnstile
+                      siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                      onSuccess={(token) => { setLoginTurnstileToken(token); setLoginErrors((p) => ({ ...p, turnstile: null })); }}
+                      onExpire={() => setLoginTurnstileToken(null)}
+                      onError={() => setLoginTurnstileToken(null)}
+                    />
+                    {loginErrors.turnstile && <div className="text-danger small mt-1">{loginErrors.turnstile}</div>}
                   </div>
                   <button type="submit" className="btn btn-gold w-100 fw-bold py-2" disabled={loading}>
                     {loading ? (
@@ -287,6 +306,15 @@ function LoginPage() {
                     </div>
                   </div>
 
+                  <div className="mb-3">
+                    <Turnstile
+                      siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                      onSuccess={(token) => { setRegTurnstileToken(token); setRegErrors((p) => ({ ...p, turnstile: null })); }}
+                      onExpire={() => setRegTurnstileToken(null)}
+                      onError={() => setRegTurnstileToken(null)}
+                    />
+                    {regErrors.turnstile && <div className="text-danger small mt-1">{regErrors.turnstile}</div>}
+                  </div>
 
                   <button type="submit" className="btn btn-gold w-100 fw-bold py-2" disabled={loading}>
                     {loading ? (
