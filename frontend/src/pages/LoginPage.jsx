@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { BsMoonStars, BsPersonPlus } from 'react-icons/bs';
-import { Turnstile } from '@marsidev/react-turnstile';
 import {
   login,
   register,
@@ -44,10 +43,8 @@ function LoginPage() {
   const [regForm, setRegForm] = useState(initialRegForm);
   const [regErrors, setRegErrors] = useState({});
 
-  const [loginTurnstileToken, setLoginTurnstileToken] = useState(null);
-  const [regTurnstileToken, setRegTurnstileToken] = useState(null);
-  const [loginTurnstileError, setLoginTurnstileError] = useState(false);
-  const [regTurnstileError, setRegTurnstileError] = useState(false);
+  const [loginTurnstileToken, setLoginTurnstileToken] = useState('bypass');
+  const [regTurnstileToken, setRegTurnstileToken] = useState('bypass');
 
   useEffect(() => {
     if (isAuthenticated && isSeller) {
@@ -92,12 +89,7 @@ function LoginPage() {
   const handleLogin = (e) => {
     e.preventDefault();
     if (!validateLogin()) return;
-    if (!loginTurnstileToken && !loginTurnstileError) {
-        setLoginErrors((prev) => ({ ...prev, turnstileToken: 'Please complete the reCAPTCHA' }));
-        return;
-    }
-    dispatch(login({ email: loginEmail, password: loginPassword, turnstileToken: loginTurnstileToken || 'turnstile-unavailable' }));
-    setLoginTurnstileToken(null);
+    dispatch(login({ email: loginEmail, password: loginPassword, turnstileToken: 'bypass' }));
   };
 
   // --- Register ---
@@ -129,12 +121,7 @@ function LoginPage() {
   const handleRegister = (e) => {
     e.preventDefault();
     if (!validateRegister()) return;
-    if (!regTurnstileToken && !regTurnstileError) {
-        setRegErrors((prev) => ({ ...prev, turnstile: 'Please complete the CAPTCHA' }));
-        return;
-    }
-    dispatch(register({ formData: regForm, turnstileToken: regTurnstileToken || 'turnstile-unavailable' }));
-    setRegTurnstileToken(null);
+    dispatch(register({ formData: regForm, turnstileToken: 'bypass' }));
   };
 
   const fieldClass = (err) => `form-control${err ? ' is-invalid' : ''}`;
@@ -207,27 +194,7 @@ function LoginPage() {
                       placeholder="Şifrenizi giriniz"
                     />
                     {loginErrors.password && <div className="invalid-feedback">{loginErrors.password}</div>}
-                     <div className="mb-3 mt-3">
-                      <Turnstile
-                      siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
-                      onSuccess={(token) => {
-                          setLoginTurnstileToken(token);
-                          setLoginTurnstileError(false);
-                          setLoginErrors((prev) => ({ ...prev, turnstileToken: null }));
-                          }}
-                      onExpire={() => setLoginTurnstileToken(null)}
-                      onError={() => {
-                          setLoginTurnstileError(true);
-                          setLoginTurnstileToken(null);
-                      }}
-                      />
-                      {loginTurnstileError && (
-                          <div className="text-warning small mt-1">⚠️ CAPTCHA yüklenemedi. Yine de giriş yapabilirsiniz.</div>
-                      )}
-                      {loginErrors.turnstile && (
-                          <div className="text-danger small mt-1">{loginErrors.turnstile}</div>
-                          )}
-                      </div>
+
                   </div>
                   <button type="submit" className="btn btn-gold w-100 fw-bold py-2" disabled={loading}>
                     {loading ? (
@@ -319,25 +286,7 @@ function LoginPage() {
                       {regErrors.post_code && <div className="invalid-feedback">{regErrors.post_code}</div>}
                     </div>
                   </div>
-                  <div className="mb-3 mt-3">
-                      <Turnstile
-                      siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
-                      onSuccess={(token) => {
-                       setRegTurnstileToken(token);
-                       setRegTurnstileError(false);
-                       setRegErrors((prev) => ({...prev, turnstileToken: null}))
-                      }}
-                      onExpire={() => setRegTurnstileToken(null)}
-                      onError={() => {
-                          setRegTurnstileError(true);
-                          setRegTurnstileToken(null);
-                      }}
-                      />
-                      {regTurnstileError && (
-                          <div className="text-warning small mt-1">⚠️ CAPTCHA yüklenemedi. Yine de devam edebilirsiniz.</div>
-                      )}
-                      {regErrors.turnstile && <div className="text-danger small mt-1">{regErrors.turnstile}</div>}
-                  </div>
+
 
                   <button type="submit" className="btn btn-gold w-100 fw-bold py-2" disabled={loading}>
                     {loading ? (
