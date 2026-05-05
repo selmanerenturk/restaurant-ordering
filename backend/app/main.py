@@ -22,6 +22,7 @@ app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 # Note: allow_origins must list specific origins (not "*") when allow_credentials=True
 ALLOWED_ORIGINS = [
     "https://restaurant-ordering-sage.vercel.app",
+    "https://restaurant-ordering-git-main-selmanerenturks-projects.vercel.app",
     "http://localhost:5173",
     "http://localhost:3000",
 ]
