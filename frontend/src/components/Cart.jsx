@@ -1,6 +1,7 @@
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { BsX, BsTrash, BsDash, BsPlus } from 'react-icons/bs';
+import { getImageUrl } from '../utils/imageUrl';
 import {
   selectCartItems,
   selectCartTotal,
@@ -45,7 +46,7 @@ function Cart() {
               return (
                 <div key={item.cartKey} className="cart-item d-flex align-items-center mb-3 p-2 rounded">
                   <img
-                    src={item.imageurl}
+                    src={getImageUrl(item.imageurl)}
                     alt={item.product_name}
                     className="cart-item-img rounded me-3"
                   />

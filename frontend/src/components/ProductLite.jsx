@@ -2,6 +2,7 @@ import { useDispatch } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { BsCartPlus, BsStarFill } from 'react-icons/bs';
 import { addToCart } from '../redux/cartSlice';
+import { getImageUrl } from '../utils/imageUrl';
 
 function ProductLite({ product, featured = false }) {
   const dispatch = useDispatch();
@@ -34,7 +35,7 @@ function ProductLite({ product, featured = false }) {
         <div className={`card product-card h-100 border-0 shadow-sm ${featured ? 'featured-product-card' : ''}`}>
           <div className="product-img-wrapper">
             <img
-              src={product.imageurl}
+              src={getImageUrl(product.imageurl)}
               className="card-img-top product-img"
               alt={product.product_name}
             />

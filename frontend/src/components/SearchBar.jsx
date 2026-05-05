@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { BsSearch, BsXLg } from 'react-icons/bs';
 import { setSearchQuery } from '../redux/productsSlice';
+import { getImageUrl } from '../utils/imageUrl';
 
 // Turkish-aware lowercase (stable - outside component)
 const toLower = (str) =>
@@ -190,7 +191,7 @@ function SearchBar() {
               onMouseEnter={() => setHighlightIndex(index)}
             >
               <img
-                src={product.imageurl}
+                src={getImageUrl(product.imageurl)}
                 alt={product.product_name}
                 className="search-suggestion-img"
               />

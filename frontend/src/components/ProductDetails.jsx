@@ -4,6 +4,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { BsCartPlus, BsArrowLeft, BsDash, BsPlus, BsChevronDown, BsChevronUp } from 'react-icons/bs';
 import { getProductWithPrices, clearSelectedProduct } from '../redux/productsSlice';
 import { addToCart } from '../redux/cartSlice';
+import { getImageUrl } from '../utils/imageUrl';
 
 function ProductDetails() {
   const { productId } = useParams();
@@ -186,7 +187,7 @@ function ProductDetails() {
         <div className="col-md-6 mb-4">
           <div className="product-detail-img-wrapper">
             <img
-              src={selectedProduct.imageurl}
+              src={getImageUrl(selectedProduct.imageurl)}
               alt={selectedProduct.name}
               className="img-fluid rounded shadow product-detail-img"
             />

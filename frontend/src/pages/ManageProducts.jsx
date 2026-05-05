@@ -12,6 +12,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { fetchProductsWithPrices, updateProduct, uploadProductImage } from '../services/productService';
 import { fetchCategories } from '../services/categoryService';
+import { getImageUrl } from '../utils/imageUrl';
 import {
   getProductOptions,
   createOption,
@@ -533,7 +534,7 @@ function ManageProducts() {
                             title="Görseli değiştirmek için tıklayın"
                           >
                             <img
-                              src={prod.imageurl}
+                              src={getImageUrl(prod.imageurl)}
                               alt={prod.name}
                               className="rounded"
                               style={{ width: '48px', height: '48px', objectFit: 'cover' }}

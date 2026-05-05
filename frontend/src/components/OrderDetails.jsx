@@ -5,6 +5,7 @@ import { BsArrowLeft, BsTrash, BsCheckCircle, BsBellSlash, BsBell, BsExclamation
 import { selectCartItems, selectCartTotal, removeFromCart, clearCart } from '../redux/cartSlice';
 import { submitOrder, resetOrder } from '../redux/orderSlice';
 import { selectRestaurantOpen, selectRestaurantReason, selectRestaurantNextOpen } from '../redux/restaurantSlice';
+import { getImageUrl } from '../utils/imageUrl';
 
 function OrderDetails() {
   const dispatch = useDispatch();
@@ -176,7 +177,7 @@ function OrderDetails() {
                 return (
                   <div key={item.cartKey} className="d-flex align-items-center mb-3 pb-3 border-bottom">
                     <img
-                      src={item.imageurl}
+                      src={getImageUrl(item.imageurl)}
                       alt={item.product_name}
                       className="rounded me-3"
                       style={{ width: '50px', height: '50px', objectFit: 'cover' }}
