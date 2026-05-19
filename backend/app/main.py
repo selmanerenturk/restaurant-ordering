@@ -25,6 +25,8 @@ ALLOWED_ORIGINS = [
     "https://restaurant-ordering-git-main-selmanerenturks-projects.vercel.app",
     "http://localhost:5173",
     "http://localhost:3000",
+    "https://www.praticket.com",
+    "https://praticket.com",
 ]
 
 app.add_middleware(
