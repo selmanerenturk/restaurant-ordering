@@ -27,6 +27,8 @@ ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "https://www.praticket.com",
     "https://praticket.com",
+    "https://ayisigitatlicisi.com",
+    "https://www.ayisigitatlicisi.com",
 ]
 
 app.add_middleware(
