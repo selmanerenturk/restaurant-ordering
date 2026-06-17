@@ -41,6 +41,12 @@ class Settings(BaseSettings):
 
     TURNSTILE_SECRET_KEY: str | None = None
 
+    # Supabase Storage for product images (persistent object storage).
+    # When unset, uploads fall back to local disk (dev only — ephemeral on Render).
+    SUPABASE_URL: str | None = None
+    SUPABASE_SERVICE_KEY: str | None = None
+    SUPABASE_STORAGE_BUCKET: str = "products"
+
     SHOP_OWNER_EMAIL: str | None = None
     SHOP_OWNER_PHONE: str | None = None
 

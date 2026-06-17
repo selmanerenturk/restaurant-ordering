@@ -1,3 +1,4 @@
+import mimetypes
 import os
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
@@ -8,8 +9,10 @@ from app.db.CRUD.products_with_default_prices import get_products_with_default_p
 from app.schemas.product import ProductCreate, ProductRead, ProductReadWithPrices, ProductUpdate
 from app.schemas.product_with_default_price import ProductWithDefaultPriceBase
 from app.models.user import User
+from app.services.storage_service import is_supabase_configured, upload_image_to_supabase
 
-ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"}
+# .svg intentionally excluded: SVG can embed scripts (stored XSS risk).
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))), "uploads", "products")
 
@@ -85,13 +88,23 @@ def upload_product_image(
 
     # Generate unique filename
     unique_name = f"{uuid.uuid4().hex}{ext}"
-    dest_path = os.path.join(UPLOAD_DIR, unique_name)
+    content_type = file.content_type or mimetypes.guess_type(unique_name)[0] or "application/octet-stream"
 
+    # Prefer persistent object storage (Supabase). Falls back to local disk only
+    # for local dev — disk is ephemeral on Render and loses images on restart.
+    if is_supabase_configured():
+        try:
+            image_url = upload_image_to_supabase(unique_name, contents, content_type)
+        except Exception as e:
+            raise HTTPException(status_code=502, detail=f"Görsel yüklenemedi: {e}")
+        return {"imageurl": image_url}
+
+    dest_path = os.path.join(UPLOAD_DIR, unique_name)
     os.makedirs(UPLOAD_DIR, exist_ok=True)
     with open(dest_path, "wb") as f:
         f.write(contents)
 
-    # Return the URL path that will be served by StaticFiles
+    # Relative path served by StaticFiles (dev fallback only)
     image_url = f"/uploads/products/{unique_name}"
     return {"imageurl": image_url}
 
