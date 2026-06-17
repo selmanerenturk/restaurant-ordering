@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.api.dependencies import get_db
+from app.api.dependencies import get_db, get_current_seller
 from app.db.CRUD.users import authenticate_user, create_seller, get_user_by_email
 from app.core.security import create_access_token
 from app.schemas.user import LoginRequest, TokenResponse, SellerRegisterRequest, UserRead
+from app.models.user import User
 
 from app.core.turnstile import verify_turnstile
 
@@ -29,10 +30,13 @@ async def login(login_data: LoginRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
-async def register_seller(data: SellerRegisterRequest, db: Session = Depends(get_db)):
-    if data.turnstile_token:
-        await verify_turnstile(data.turnstile_token)
-
+async def register_seller(
+    data: SellerRegisterRequest,
+    db: Session = Depends(get_db),
+    current_seller: User = Depends(get_current_seller),
+):
+    # Only an already-authenticated seller may create new seller accounts.
+    # The very first account must be created out-of-band via backend/create_seller.py
     existing = get_user_by_email(db, data.email.lower().strip())
     if existing:
         raise HTTPException(

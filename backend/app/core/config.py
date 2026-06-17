@@ -1,4 +1,8 @@
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Known insecure placeholder that must never be used as a real signing key.
+_INSECURE_JWT_PLACEHOLDER = "change-me-to-a-random-secret-key-in-production"
 
 
 class Settings(BaseSettings):
@@ -16,9 +20,24 @@ class Settings(BaseSettings):
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: int = 5432
 
-    JWT_SECRET_KEY: str = "change-me-to-a-random-secret-key-in-production"
+    # Required: no default. The app refuses to start without a real key.
+    # Generate one with:  openssl rand -hex 32
+    JWT_SECRET_KEY: str
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 480
+
+    @field_validator("JWT_SECRET_KEY")
+    @classmethod
+    def _reject_insecure_jwt_key(cls, v: str) -> str:
+        if not v or v.strip() == _INSECURE_JWT_PLACEHOLDER:
+            raise ValueError(
+                "JWT_SECRET_KEY is missing or set to the insecure placeholder. "
+                "Set a strong random value (e.g. `openssl rand -hex 32`) via the "
+                "environment / Render env panel."
+            )
+        if len(v) < 32:
+            raise ValueError("JWT_SECRET_KEY is too short; use at least 32 characters.")
+        return v
 
     TURNSTILE_SECRET_KEY: str | None = None
 
