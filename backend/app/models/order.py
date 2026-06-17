@@ -1,13 +1,24 @@
+import secrets
+
 from sqlalchemy import Column, Integer, String, Boolean, Numeric, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base import Base
 
 
+def generate_tracking_token() -> str:
+    """Unguessable token used in public order-tracking links (instead of the sequential id)."""
+    return secrets.token_urlsafe(32)
+
+
 class Order(Base):
     __tablename__ = "orders"
 
     id = Column(Integer, primary_key=True, index=True)
+    # Public, unguessable identifier for order tracking (prevents IDOR via sequential id).
+    tracking_token = Column(
+        String, unique=True, index=True, nullable=False, default=generate_tracking_token
+    )
     status = Column(String, nullable=False, default="confirmed")
     currency_code = Column(String(3), nullable=False, default="TRY")
 

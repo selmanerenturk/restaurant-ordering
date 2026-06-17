@@ -28,14 +28,14 @@ function StatusBadge({ status }) {
 }
 
 export default function TrackOrderPage() {
-  const { orderId } = useParams();
+  const { trackingToken } = useParams();
   const [order, setOrder]   = useState(null);
   const [error, setError]   = useState(null);
   const [loading, setLoading] = useState(true);
 
   const fetchOrder = async () => {
     try {
-      const res = await api.get(`/orders/track/${orderId}`);
+      const res = await api.get(`/orders/track/${trackingToken}`);
       setOrder(res.data);
       setError(null);
     } catch (e) {
@@ -50,7 +50,7 @@ export default function TrackOrderPage() {
     // Poll every 30 seconds for live updates
     const interval = setInterval(fetchOrder, 30000);
     return () => clearInterval(interval);
-  }, [orderId]);
+  }, [trackingToken]);
 
   const currentStepIndex = order
     ? STATUS_STEPS.findIndex((s) => s.key === order.status)
@@ -177,25 +177,18 @@ export default function TrackOrderPage() {
             </div>
             <div className="col-md-5">
               <div className="card border-0 shadow-sm p-4 h-100">
-                <h6 className="fw-semibold mb-3">Teslimat Bilgileri</h6>
-                <p className="mb-1"><strong>{order.full_name}</strong></p>
-                <p className="mb-1 text-muted">{order.phone}</p>
-                {order.delivery_type === 'delivery' ? (
-                  <>
-                    <p className="mb-1">{order.address_line1}</p>
-                    {order.address_line2 && <p className="mb-1">{order.address_line2}</p>}
-                    <p className="mb-1">{[order.district, order.city].filter(Boolean).join(', ')}</p>
-                  </>
-                ) : (
-                  <p className="mb-1 text-info">Gel-al siparişi</p>
-                )}
-                <hr />
-                <p className="mb-1 small text-muted">
+                <h6 className="fw-semibold mb-3">Sipariş Bilgileri</h6>
+                <p className="mb-1">
+                  Teslimat:{' '}
+                  <strong>{order.delivery_type === 'pickup' ? 'Gel-al' : 'Adrese teslimat'}</strong>
+                </p>
+                <p className="mb-1">
                   Ödeme: <strong>{order.payment_type === 'cash' ? 'Nakit' : 'Kart'}</strong>
                 </p>
-                {order.order_note && (
-                  <p className="mb-0 small text-muted">Not: {order.order_note}</p>
-                )}
+                <hr />
+                <p className="mb-0 small text-muted">
+                  Güvenliğiniz için kişisel bilgiler bu sayfada gösterilmez.
+                </p>
               </div>
             </div>
           </div>

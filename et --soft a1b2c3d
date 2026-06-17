@@ -1,0 +1,10 @@
+[33m083fedf[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{0}: rebase (finish): returning to refs/heads/main
+[33m083fedf[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{1}: rebase (start): checkout 083fedfa83c3e2c07acac4085ebd61e50478ec7f
+[33m1d948ae[m HEAD@{2}: commit: Twilio sandbox wp entegrasyonu deploy edildi. Müşterinin sipariş ardından durum takibi sağlayabilmesi için bir sipariş takip sayfası yazıldı ve bu sayfanın linki twilio mesajı içinde müşteriye gönderimi sağlandı. Tüm işlevler çalışır durumda.
+[33m083fedf[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{3}: commit: restoran ayarlarındaki işlevler yeniden düzenlendi ve iyileştirildi, sepete eklenen ürünler reduxtan local storage alındı, sipariş slip yazdırma eklendi, ürün görseli yükleme güncelleme işlevi eklendi.
+[33mb7d3972[m HEAD@{4}: commit: admin paneline sipariş bildirim alanı eklendi, popüler ürünleri sergilemek için favorileme alanı eklendi, ürün arama (search bar) eklendi, günlük sipariş özet alanı admin paneline eklendi, toplu indirim yöntemi admin paneline eklendi.
+[33ma79eb0c[m HEAD@{5}: commit: Restorant ayarları ve açılış kapanış saatleri eklendi. Kategori düzenleme, sıralama eklendi. Sipariş durum ekranı ve ürün seçenekleri ekranında yer alan birkaç hata düzeltmesi yapıldı ve ürün ekleme ekranına malzeme ekleme özellikleri entegre edildi.
+[33mf808218[m HEAD@{6}: merge origin/main: Merge made by the 'ort' strategy.
+[33mc8c1f1e[m HEAD@{7}: commit: Sipariş takip sayfası satıcı paneline eklendi. Sipariş özet ekranına sipariş notu ve zile basma uyarısı ile beraber ödeme türü ve teslimat türü seçenekleri eklendi. Ürünlere malzeme ekleme ve çıkartma seçenekleri eklendi ve sipariş durum ekranına entegre edildi
+[33m11b92c0[m HEAD@{8}: commit: MVP enhanced
+[33meb9360d[m HEAD@{9}: commit (initial): initial setup

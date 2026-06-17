@@ -40,7 +40,7 @@ function AppContent() {
           <Route path="/" element={<HomePage />} />
           <Route path="/product/:productId" element={<ProductPage />} />
           <Route path="/order" element={<OrderPage />} />
-          <Route path="/order/track/:orderId" element={<TrackOrderPage />} />
+          <Route path="/order/track/:trackingToken" element={<TrackOrderPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/seller/dashboard" element={<ProtectedRoute><SellerDashboard /></ProtectedRoute>} />
           <Route path="/seller/categories" element={<ProtectedRoute><ManageCategories /></ProtectedRoute>} />

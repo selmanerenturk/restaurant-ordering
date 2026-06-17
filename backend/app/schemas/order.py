@@ -116,8 +116,27 @@ class OrderItemRead(BaseModel):
         from_attributes = True
 
 
+class OrderTrackRead(BaseModel):
+    """Public order-tracking view. Intentionally excludes all personal data
+    (name, phone, email, address, order note) — only order status and items."""
+    id: int
+    status: str
+    currency_code: str
+    subtotal: Decimal
+    delivery_fee: Decimal
+    total: Decimal
+    delivery_type: str
+    payment_type: str
+    created_at: datetime
+    items: list[OrderItemRead]
+
+    class Config:
+        from_attributes = True
+
+
 class OrderRead(BaseModel):
     id: int
+    tracking_token: str
     status: str
     currency_code: str
     subtotal: Decimal

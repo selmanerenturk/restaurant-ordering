@@ -70,6 +70,15 @@ def get_order(db: Session, order_id: int) -> Optional[Order]:
     )
 
 
+def get_order_by_tracking_token(db: Session, tracking_token: str) -> Optional[Order]:
+    return (
+        db.query(Order)
+        .options(selectinload(Order.items).selectinload(OrderItem.selected_options))
+        .filter(Order.tracking_token == tracking_token)
+        .first()
+    )
+
+
 def update_order_status(db: Session, order_id: int, new_status: str) -> Optional[Order]:
     if new_status not in VALID_STATUSES:
         raise ValueError(f"Invalid status '{new_status}'. Must be one of: {VALID_STATUSES}")

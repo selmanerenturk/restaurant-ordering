@@ -101,7 +101,7 @@ function OrderDetails() {
   };
 
   if (success && currentOrder) {
-    const trackingUrl = `/order/track/${currentOrder.id}`;
+    const trackingUrl = `/order/track/${currentOrder.tracking_token}`;
     return (
       <div className="container py-5">
         <div className="row justify-content-center">

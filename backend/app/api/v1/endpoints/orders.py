@@ -4,9 +4,9 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, R
 from sqlalchemy.orm import Session
 from app.api.dependencies import get_db, get_current_seller
 from app.core.config import settings
-from app.db.CRUD.orders import create_order, get_orders, get_order, update_order_status, get_orders_count, get_daily_order_summary
+from app.db.CRUD.orders import create_order, get_orders, get_order, get_order_by_tracking_token, update_order_status, get_orders_count, get_daily_order_summary
 from app.db.CRUD.restaurant_settings import check_restaurant_availability
-from app.schemas.order import OrderCreate, OrderRead, OrderStatusUpdate
+from app.schemas.order import OrderCreate, OrderRead, OrderTrackRead, OrderStatusUpdate
 from app.utils import send_email_smtp, verify_turnstile
 from app.services.notification_service import NotificationManager, NotificationService
 from app.api.v1.endpoints.websocket import broadcast_new_order_notification
@@ -17,15 +17,14 @@ router = APIRouter()
 
 # ── Public: order tracking (no auth needed) ──────────────────────────────────
 
-class OrderTrackRead(OrderRead):
-    """Slim public view — same fields as OrderRead, just re-exported for clarity."""
-    pass
+@router.get("/track/{tracking_token}", response_model=OrderTrackRead)
+def track_order(tracking_token: str, db: Session = Depends(get_db)):
+    """Public endpoint: look up an order by its unguessable tracking token.
 
-
-@router.get("/track/{order_id}", response_model=OrderTrackRead)
-def track_order(order_id: int, db: Session = Depends(get_db)):
-    """Public endpoint: customer can look up their order status by ID."""
-    order = get_order(db, order_id)
+    Uses the random tracking_token (not the sequential id) and returns a slim
+    view with no personal data, so enumerating ids leaks nothing (anti-IDOR).
+    """
+    order = get_order_by_tracking_token(db, tracking_token)
     if order is None:
         raise HTTPException(status_code=404, detail="Sipariş bulunamadı")
     return order
@@ -97,7 +96,7 @@ def change_order_status(
 
     # Send customer WhatsApp status update
     if settings.ENABLE_CUSTOMER_WHATSAPP_NOTIFICATIONS:
-        tracking_url = f"{settings.CUSTOMER_APP_BASE_URL}/order/track/{order.id}"
+        tracking_url = f"{settings.CUSTOMER_APP_BASE_URL}/order/track/{order.tracking_token}"
         status_labels = {
             "confirmed": "Onaylandı ✅",
             "preparing": "Hazırlanıyor 👨‍🍳",
@@ -182,7 +181,7 @@ def create_order_endpoint(
 
     # Customer WhatsApp confirmation with tracking link
     if settings.ENABLE_CUSTOMER_WHATSAPP_NOTIFICATIONS:
-        tracking_url = f"{settings.CUSTOMER_APP_BASE_URL}/order/track/{created.id}"
+        tracking_url = f"{settings.CUSTOMER_APP_BASE_URL}/order/track/{created.tracking_token}"
         customer_msg = (
             f"Merhaba {created.full_name}! 🎉\n\n"
             f"Siparişiniz alındı. Sipariş numaranız: #{created.id}\n"
