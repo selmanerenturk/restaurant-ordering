@@ -48,7 +48,9 @@ const productsSlice = createSlice({
       })
       .addCase(getProductsWithDefaultPrices.fulfilled, (state, action) => {
         state.loading = false;
-        state.items = action.payload;
+        // Guard against a non-array response (e.g. misconfigured API base URL
+        // returning index.html) so the whole app never white-screens.
+        state.items = Array.isArray(action.payload) ? action.payload : [];
       })
       .addCase(getProductsWithDefaultPrices.rejected, (state, action) => {
         state.loading = false;
