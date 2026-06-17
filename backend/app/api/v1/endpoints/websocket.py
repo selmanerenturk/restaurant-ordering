@@ -1,7 +1,7 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
 from sqlalchemy.orm import Session
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.api.dependencies import get_db
 from app.db.CRUD.notifications import get_notifications, get_unread_notification_count
@@ -58,12 +58,12 @@ async def broadcast_new_order_notification(order) -> None:
     Called from the order creation endpoint."""
     notification_data = {
         "type": "notification",
-        "id": f"ws-{order.id}-{datetime.utcnow().timestamp()}",
+        "id": f"ws-{order.id}-{datetime.now(timezone.utc).timestamp()}",
         "order_id": order.id,
         "channel": "panel",
         "status": "sent",
         "message": f"🆕 Yeni sipariş #{order.id} - {order.full_name} - {order.total} TRY",
-        "created_at": datetime.utcnow().isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat(),
         "is_read": False,
         "subject": f"Yeni Sipariş #{order.id}",
         "play_sound": True,

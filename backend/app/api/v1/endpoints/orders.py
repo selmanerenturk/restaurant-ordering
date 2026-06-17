@@ -7,7 +7,9 @@ from app.core.config import settings
 from app.db.CRUD.orders import create_order, get_orders, get_order, get_order_by_tracking_token, update_order_status, get_orders_count, get_daily_order_summary
 from app.db.CRUD.restaurant_settings import check_restaurant_availability
 from app.schemas.order import OrderCreate, OrderRead, OrderTrackRead, OrderStatusUpdate
-from app.utils import send_email_smtp, verify_turnstile
+from app.utils import send_email_smtp
+from app.core.turnstile import verify_turnstile
+from app.core.limiter import limiter
 from app.services.notification_service import NotificationManager, NotificationService
 from app.api.v1.endpoints.websocket import broadcast_new_order_notification
 
@@ -120,12 +122,16 @@ def change_order_status(
 
 
 @router.post("/", response_model=OrderRead)
-def create_order_endpoint(
-    order_in: OrderCreate,
+@limiter.limit("10/minute")
+async def create_order_endpoint(
     request: Request,
+    order_in: OrderCreate,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
+    # Verify CAPTCHA first — fail-closed, rejects missing/invalid tokens.
+    await verify_turnstile(order_in.turnstile_token)
+
     # Enforce restaurant availability (temporary closure + working hours)
     availability = check_restaurant_availability(db)
     if not availability["is_open"]:

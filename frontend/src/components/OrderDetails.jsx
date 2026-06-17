@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import { Turnstile } from '@marsidev/react-turnstile';
 import { BsArrowLeft, BsTrash, BsCheckCircle, BsBellSlash, BsBell, BsExclamationTriangleFill, BsClock } from 'react-icons/bs';
 import { selectCartItems, selectCartTotal, removeFromCart, clearCart } from '../redux/cartSlice';
 import { submitOrder, resetOrder } from '../redux/orderSlice';
@@ -33,6 +34,7 @@ function OrderDetails() {
   });
 
   const [formErrors, setFormErrors] = useState({});
+  const [turnstileToken, setTurnstileToken] = useState(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -61,6 +63,10 @@ function OrderDetails() {
     e.preventDefault();
     if (!validateForm()) return;
     if (cartItems.length === 0) return;
+    if (!turnstileToken) {
+      setFormErrors((prev) => ({ ...prev, turnstile: 'Lütfen CAPTCHA doğrulamasını tamamlayınız' }));
+      return;
+    }
 
     const orderData = {
       customer: {
@@ -88,7 +94,7 @@ function OrderDetails() {
           is_removed: o.is_removed || false,
         })),
       })),
-      turnstile_token: 'not-required',
+      turnstile_token: turnstileToken,
     };
 
     dispatch(submitOrder(orderData));
@@ -438,6 +444,16 @@ function OrderDetails() {
                     placeholder="Eklemek istediğiniz notları buraya yazabilirsiniz..."
                     rows={3}
                   />
+                </div>
+
+                <div className="mb-3">
+                  <Turnstile
+                    siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                    onSuccess={(token) => { setTurnstileToken(token); setFormErrors((p) => ({ ...p, turnstile: null })); }}
+                    onExpire={() => setTurnstileToken(null)}
+                    onError={() => setTurnstileToken(null)}
+                  />
+                  {formErrors.turnstile && <div className="text-danger small mt-1">{formErrors.turnstile}</div>}
                 </div>
 
                 {error && (

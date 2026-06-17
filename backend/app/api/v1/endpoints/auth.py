@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 from app.api.dependencies import get_db, get_current_seller
+from app.core.limiter import limiter
 from app.db.CRUD.users import authenticate_user, create_seller, get_user_by_email
 from app.core.security import create_access_token
 from app.schemas.user import LoginRequest, TokenResponse, SellerRegisterRequest, UserRead
@@ -12,9 +13,10 @@ router = APIRouter()
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(login_data: LoginRequest, db: Session = Depends(get_db)):
-    if login_data.turnstile_token:
-        await verify_turnstile(login_data.turnstile_token)
+@limiter.limit("5/minute")
+async def login(request: Request, login_data: LoginRequest, db: Session = Depends(get_db)):
+    # Fail-closed: missing/invalid token is rejected inside verify_turnstile.
+    await verify_turnstile(login_data.turnstile_token)
 
     user = authenticate_user(db, login_data.email, login_data.password)
     if user is None:

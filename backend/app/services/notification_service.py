@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from datetime import datetime, time
+from datetime import datetime, time, timezone
 from typing import Optional
 from fastapi import BackgroundTasks
 from sqlalchemy.orm import Session
@@ -269,7 +269,7 @@ class NotificationManager:
                 
                 if success:
                     notification.status = NotificationStatus.SENT
-                    notification.sent_at = datetime.utcnow()
+                    notification.sent_at = datetime.now(timezone.utc)
                     notification.retry_count = 0
                 else:
                     raise Exception(error_message or "Failed to send notification")
