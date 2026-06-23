@@ -1,0 +1,19 @@
+name: Keep backend warm
+
+# Render's free tier spins the service down after ~15 min of inactivity, so the
+# first visitor after an idle period waits ~10s for a cold start. This job pings
+# the backend every ~10 minutes to keep the container awake, so first page loads
+# stay fast. No cost; runs on GitHub-hosted runners.
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"   # every 10 minutes
+  workflow_dispatch:           # allow manual runs from the Actions tab
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping backend root
+        # -f: fail on HTTP errors, -m 90: allow time for a cold start to wake up
+        run: curl -fsS -m 90 https://restaurant-ordering-1-3psg.onrender.com/ > /dev/null
