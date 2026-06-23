@@ -45,6 +45,11 @@ function ManageProducts() {
     const [submitting, setSubmitting] = useState(false);
     const [updatingImageId, setUpdatingImageId] = useState(null);
 
+    // --- Inline image edit modal (choose file upload or URL) ---
+    const [imageEditProductId, setImageEditProductId] = useState(null);
+    const [inlineUrlInput, setInlineUrlInput] = useState('');
+    const [inlineUrlSaving, setInlineUrlSaving] = useState(false);
+
     // --- Ref to track which product we're updating (avoids stale closure) ---
     const updatingImageIdRef = useRef(null);
     const inlineImageInputRef = useRef(null);
@@ -170,12 +175,46 @@ function ManageProducts() {
     };
 
     // ─── Inline image update (table row click) ───────────────────────────
+    // Open a small modal letting the seller choose file upload or a URL.
     const handleInlineImageClick = (productId) => {
+    setImageEditProductId(productId);
+    setInlineUrlInput('');
+    };
+
+    // From the modal: trigger the file picker (existing crop/upload flow).
+    const triggerInlineFileUpload = () => {
+    const productId = imageEditProductId;
+    if (!productId) return;
     updatingImageIdRef.current = productId;   // ← ref set synchronously
     setUpdatingImageId(productId);
+    setImageEditProductId(null);              // close modal; crop modal takes over
     if (inlineImageInputRef.current) {
       inlineImageInputRef.current.value = '';
       inlineImageInputRef.current.click();
+    }
+    };
+
+    // From the modal: save an external image URL directly to the product.
+    const handleInlineUrlSave = async () => {
+    const productId = imageEditProductId;
+    const url = inlineUrlInput.trim();
+    if (!productId || !url) return;
+    if (!/^https?:\/\//i.test(url)) {
+      setError('Lütfen http(s):// ile başlayan geçerli bir URL girin.');
+      return;
+    }
+    try {
+      setInlineUrlSaving(true);
+      await updateProduct(productId, { imageurl: url });
+      setProducts((prev) =>
+        prev.map((p) => (p.id === productId ? { ...p, imageurl: url } : p))
+      );
+      setImageEditProductId(null);
+      setInlineUrlInput('');
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Görsel güncellenirken hata oluştu');
+    } finally {
+      setInlineUrlSaving(false);
     }
     };
 
@@ -426,7 +465,7 @@ function ManageProducts() {
                           <>
                             <BsCloudUpload size={32} className="text-muted mb-2" />
                             <span className="text-muted">Görsel yüklemek için tıklayın</span>
-                            <small className="text-muted">JPG, PNG, GIF, WebP, SVG • Maks 5MB</small>
+                            <small className="text-muted">JPG, PNG, GIF, WebP • Maks 5MB</small>
                           </>
                         )}
                       </label>
@@ -434,7 +473,7 @@ function ManageProducts() {
                         type="file"
                         id="imageFileInput"
                         className="d-none"
-                        accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
+                        accept="image/jpeg,image/png,image/gif,image/webp"
                         onChange={handleImageFileChange}
                       />
                     </div>
@@ -795,9 +834,55 @@ function ManageProducts() {
         type="file"
         ref={inlineImageInputRef}
         className="d-none"
-        accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
+        accept="image/jpeg,image/png,image/gif,image/webp"
         onChange={handleInlineImageChange}
       />
+
+      {/* ── Inline image edit: choose file or URL ── */}
+      {imageEditProductId && (
+        <div
+          className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+          style={{ background: 'rgba(0,0,0,0.5)', zIndex: 1060 }}
+          onClick={() => setImageEditProductId(null)}
+        >
+          <div
+            className="card border-0 shadow p-4"
+            style={{ maxWidth: '420px', width: '90%' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h5 className="fw-bold mb-3">Ürün görselini değiştir</h5>
+
+            <button type="button" className="btn btn-gold w-100 mb-3" onClick={triggerInlineFileUpload}>
+              <BsCloudUpload className="me-1" /> Bilgisayardan dosya yükle
+            </button>
+
+            <div className="text-center text-muted small mb-2">— veya —</div>
+
+            <label className="form-label fw-semibold">Görsel URL'i</label>
+            <input
+              type="url"
+              className="form-control mb-3"
+              value={inlineUrlInput}
+              onChange={(e) => setInlineUrlInput(e.target.value)}
+              placeholder="https://..."
+            />
+
+            <div className="d-flex gap-2">
+              <button
+                type="button"
+                className="btn btn-gold flex-fill"
+                onClick={handleInlineUrlSave}
+                disabled={inlineUrlSaving || !inlineUrlInput.trim()}
+              >
+                {inlineUrlSaving ? 'Kaydediliyor...' : "URL'i kaydet"}
+              </button>
+              <button type="button" className="btn btn-outline-secondary" onClick={() => setImageEditProductId(null)}>
+                İptal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Image Crop Modal ── */}
       {cropImageSrc && (
