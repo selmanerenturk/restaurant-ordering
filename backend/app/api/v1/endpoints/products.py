@@ -4,7 +4,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from app.api.dependencies import get_db, get_current_seller
-from app.db.CRUD.products import create_product, get_all_products_with_prices, get_product_by_id_with_prices, get_products, update_product
+from app.db.CRUD.products import create_product, delete_product, get_all_products_with_prices, get_product_by_id_with_prices, get_products, update_product
 from app.db.CRUD.products_with_default_prices import get_products_with_default_prices
 from app.schemas.product import ProductCreate, ProductRead, ProductReadWithPrices, ProductUpdate
 from app.schemas.product_with_default_price import ProductWithDefaultPriceBase
@@ -49,6 +49,23 @@ def patch_product(
     if product is None:
         raise HTTPException(status_code=404, detail="Product not found")
     return product
+
+
+@router.delete("/{product_id}")
+def remove_product(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_seller: User = Depends(get_current_seller),
+):
+    result = delete_product(db, product_id)
+    if result == "not_found":
+        raise HTTPException(status_code=404, detail="Product not found")
+    if result == "in_use":
+        raise HTTPException(
+            status_code=409,
+            detail="Bu ürün mevcut siparişlerde kullanıldığı için silinemez. Bunun yerine ürünü 'stok dışı' yapabilirsiniz.",
+        )
+    return {"detail": "Deleted"}
 
 
 @router.get("/with_prices", response_model=list[ProductReadWithPrices])

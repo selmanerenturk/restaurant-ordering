@@ -20,6 +20,11 @@ export const updateProduct = async (productId, data) => {
   return response.data;
 };
 
+export const deleteProduct = async (productId) => {
+  const response = await api.delete(`/products/${productId}`);
+  return response.data;
+};
+
 export const uploadProductImage = async (file) => {
   const formData = new FormData();
   formData.append('file', file);

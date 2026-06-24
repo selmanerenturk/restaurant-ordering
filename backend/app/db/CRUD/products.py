@@ -1,5 +1,7 @@
 from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.exc import IntegrityError
 from app.models.product import Product
+from app.models.product_price import ProductPrice
 from app.models.product_option import ProductOption
 from app.schemas.product import ProductCreate, ProductUpdate
 
@@ -29,6 +31,25 @@ def update_product(db: Session, product_id: int, product_update: ProductUpdate):
     db.commit()
     db.refresh(db_product)
     return db_product
+
+
+def delete_product(db: Session, product_id: int) -> str:
+    """Delete a product and its prices/options.
+    Returns: 'ok' | 'not_found' | 'in_use' (referenced by existing orders)."""
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        return "not_found"
+    try:
+        # prices have no cascade; remove them first (options cascade automatically)
+        db.query(ProductPrice).filter(ProductPrice.product_id == product_id).delete(
+            synchronize_session=False
+        )
+        db.delete(product)
+        db.commit()
+        return "ok"
+    except IntegrityError:
+        db.rollback()
+        return "in_use"
 
 
 def get_all_products_with_prices(db: Session):

@@ -8,9 +8,12 @@ import {
   BsPlus,
   BsImage,
   BsCloudUpload,
+  BsPencil,
+  BsCheck2,
+  BsX,
 } from 'react-icons/bs';
 import { useNavigate } from 'react-router-dom';
-import { fetchProductsWithPrices, updateProduct, uploadProductImage } from '../services/productService';
+import { fetchProductsWithPrices, updateProduct, deleteProduct, uploadProductImage } from '../services/productService';
 import { fetchCategories } from '../services/categoryService';
 import { getImageUrl } from '../utils/imageUrl';
 import {
@@ -49,6 +52,10 @@ function ManageProducts() {
     const [imageEditProductId, setImageEditProductId] = useState(null);
     const [inlineUrlInput, setInlineUrlInput] = useState('');
     const [inlineUrlSaving, setInlineUrlSaving] = useState(false);
+
+    // --- Inline product name editing ---
+    const [editingNameId, setEditingNameId] = useState(null);
+    const [editNameValue, setEditNameValue] = useState('');
 
     // --- Ref to track which product we're updating (avoids stale closure) ---
     const updatingImageIdRef = useRef(null);
@@ -354,6 +361,35 @@ function ManageProducts() {
     return cat ? cat.name : catId;
     };
 
+    // ─── Inline product name edit ───────────────────────────────────────
+    const handleStartEditName = (prod) => {
+    setEditingNameId(prod.id);
+    setEditNameValue(prod.name);
+    };
+
+    const handleSaveName = async (productId) => {
+    const name = editNameValue.trim();
+    if (!name) return;
+    try {
+      await updateProduct(productId, { name });
+      setProducts((prev) => prev.map((p) => (p.id === productId ? { ...p, name } : p)));
+      setEditingNameId(null);
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Ürün adı güncellenirken hata oluştu');
+    }
+    };
+
+    // ─── Delete product ─────────────────────────────────────────────────
+    const handleDeleteProduct = async (prod) => {
+    if (!window.confirm(`"${prod.name}" ürününü silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`)) return;
+    try {
+      await deleteProduct(prod.id);
+      setProducts((prev) => prev.filter((p) => p.id !== prod.id));
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Ürün silinirken hata oluştu');
+    }
+    };
+
   return (
     <div className="container py-4">
       <button className="btn btn-link text-decoration-none mb-3 back-link" onClick={() => navigate('/seller/dashboard')}>
@@ -601,7 +637,34 @@ function ManageProducts() {
                             )}
                           </div>
                         </td>
-                        <td className="fw-semibold">{prod.name}</td>
+                        <td className="fw-semibold">
+                          {editingNameId === prod.id ? (
+                            <div className="d-flex gap-1 align-items-center">
+                              <input
+                                type="text"
+                                className="form-control form-control-sm"
+                                style={{ minWidth: '120px' }}
+                                value={editNameValue}
+                                onChange={(e) => setEditNameValue(e.target.value)}
+                                autoFocus
+                                onKeyDown={(e) => { if (e.key === 'Enter') handleSaveName(prod.id); if (e.key === 'Escape') setEditingNameId(null); }}
+                              />
+                              <button className="btn btn-sm btn-success" onClick={() => handleSaveName(prod.id)} title="Kaydet"><BsCheck2 /></button>
+                              <button className="btn btn-sm btn-outline-secondary" onClick={() => setEditingNameId(null)} title="İptal"><BsX /></button>
+                            </div>
+                          ) : (
+                            <span className="d-inline-flex align-items-center gap-2">
+                              {prod.name}
+                              <button
+                                className="btn btn-sm btn-link p-0 text-secondary"
+                                onClick={() => handleStartEditName(prod)}
+                                title="İsmi düzenle"
+                              >
+                                <BsPencil />
+                              </button>
+                            </span>
+                          )}
+                        </td>
                         <td>{getCategoryName(prod.category_id)}</td>
                         <td>
                           <span className={`badge ${prod.instock ? 'bg-success' : 'bg-danger'}`}>
@@ -625,13 +688,22 @@ function ManageProducts() {
                           ))}
                         </td>
                         <td>
-                          <button
-                            className={`btn btn-sm ${expandedProductId === prod.id ? 'btn-gold' : 'btn-outline-secondary'}`}
-                            onClick={() => handleToggleIngredients(prod.id)}
-                          >
-                            {expandedProductId === prod.id ? <BsChevronUp className="me-1" /> : <BsChevronDown className="me-1" />}
-                            Malzemeler
-                          </button>
+                          <div className="d-flex gap-1">
+                            <button
+                              className={`btn btn-sm ${expandedProductId === prod.id ? 'btn-gold' : 'btn-outline-secondary'}`}
+                              onClick={() => handleToggleIngredients(prod.id)}
+                            >
+                              {expandedProductId === prod.id ? <BsChevronUp className="me-1" /> : <BsChevronDown className="me-1" />}
+                              Malzemeler
+                            </button>
+                            <button
+                              className="btn btn-sm btn-outline-danger"
+                              onClick={() => handleDeleteProduct(prod)}
+                              title="Ürünü sil"
+                            >
+                              <BsTrash />
+                            </button>
+                          </div>
                         </td>
                       </tr>
 

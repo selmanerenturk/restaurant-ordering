@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react';
-import { BsArrowLeft, BsPlusCircle } from 'react-icons/bs';
+import { BsArrowLeft, BsPlusCircle, BsPencil, BsTrash, BsCheck2, BsX } from 'react-icons/bs';
 import { useNavigate } from 'react-router-dom';
-import { fetchProductPrices, createProductPrice } from '../services/productPriceService';
+import {
+  fetchProductPrices,
+  createProductPrice,
+  updateProductPrice,
+  deleteProductPrice,
+} from '../services/productPriceService';
 import { fetchProductsWithPrices } from '../services/productService';
 
 function ManagePrices() {
@@ -20,6 +25,8 @@ function ManagePrices() {
     currency_code: 'TRY',
   });
   const [submitting, setSubmitting] = useState(false);
+  const [editingPriceId, setEditingPriceId] = useState(null);
+  const [editPriceData, setEditPriceData] = useState({});
 
   const loadData = async () => {
     try {
@@ -74,6 +81,43 @@ function ManagePrices() {
   const getProductName = (productId) => {
     const prod = products.find((p) => p.id === productId);
     return prod ? prod.name : productId;
+  };
+
+  const handleStartEdit = (p) => {
+    setEditingPriceId(p.id);
+    setEditPriceData({
+      quantity_code: p.quantity_code,
+      unit_code: p.unit_code,
+      price: p.price,
+      currency_code: p.currency_code,
+      is_default: p.is_default,
+    });
+  };
+
+  const handleSaveEdit = async (priceId) => {
+    try {
+      await updateProductPrice(priceId, {
+        quantity_code: parseInt(editPriceData.quantity_code),
+        unit_code: editPriceData.unit_code,
+        price: parseFloat(editPriceData.price),
+        currency_code: editPriceData.currency_code,
+        is_default: editPriceData.is_default,
+      });
+      setEditingPriceId(null);
+      await loadData();
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Fiyat güncellenirken hata oluştu');
+    }
+  };
+
+  const handleDelete = async (priceId) => {
+    if (!window.confirm('Bu fiyatı silmek istediğinize emin misiniz?')) return;
+    try {
+      await deleteProductPrice(priceId);
+      setPrices((prev) => prev.filter((p) => p.id !== priceId));
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Fiyat silinirken hata oluştu');
+    }
   };
 
   return (
@@ -210,29 +254,106 @@ function ManagePrices() {
                   <th>Fiyat</th>
                   <th>Para birimi</th>
                   <th>Varsayılan ürün</th>
+                  <th style={{ width: '120px' }}>İşlem</th>
                 </tr>
               </thead>
               <tbody>
                 {prices.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="text-center py-4 text-muted">Fiyat bulunamadı</td>
+                    <td colSpan="8" className="text-center py-4 text-muted">Fiyat bulunamadı</td>
                   </tr>
                 ) : (
-                  prices.map((p) => (
+                  prices.map((p) => {
+                    const isEditing = editingPriceId === p.id;
+                    return (
                     <tr key={p.id}>
                       <td>{p.id}</td>
                       <td className="fw-semibold">{getProductName(p.product_id)}</td>
-                      <td>{p.quantity_code}</td>
-                      <td>{p.unit_code}</td>
-                      <td>{parseFloat(p.price).toFixed(2)}</td>
-                      <td>{p.currency_code}</td>
                       <td>
-                        <span className={`badge ${p.is_default ? 'bg-warning text-dark' : 'bg-secondary'}`}>
-                          {p.is_default ? 'Evet' : 'Hayır'}
-                        </span>
+                        {isEditing ? (
+                          <input
+                            type="number"
+                            className="form-control form-control-sm"
+                            style={{ width: '90px' }}
+                            value={editPriceData.quantity_code}
+                            onChange={(e) => setEditPriceData({ ...editPriceData, quantity_code: e.target.value })}
+                          />
+                        ) : p.quantity_code}
+                      </td>
+                      <td>
+                        {isEditing ? (
+                          <select
+                            className="form-select form-select-sm"
+                            style={{ width: '90px' }}
+                            value={editPriceData.unit_code}
+                            onChange={(e) => setEditPriceData({ ...editPriceData, unit_code: e.target.value })}
+                          >
+                            <option value="g">g</option>
+                            <option value="kg">kg</option>
+                            <option value="pcs">pcs</option>
+                            <option value="box">kutu</option>
+                          </select>
+                        ) : p.unit_code}
+                      </td>
+                      <td>
+                        {isEditing ? (
+                          <input
+                            type="number"
+                            step="0.01"
+                            className="form-control form-control-sm"
+                            style={{ width: '100px' }}
+                            value={editPriceData.price}
+                            onChange={(e) => setEditPriceData({ ...editPriceData, price: e.target.value })}
+                          />
+                        ) : parseFloat(p.price).toFixed(2)}
+                      </td>
+                      <td>
+                        {isEditing ? (
+                          <select
+                            className="form-select form-select-sm"
+                            style={{ width: '90px' }}
+                            value={editPriceData.currency_code}
+                            onChange={(e) => setEditPriceData({ ...editPriceData, currency_code: e.target.value })}
+                          >
+                            <option value="TRY">TRY</option>
+                            <option value="USD">USD</option>
+                            <option value="EUR">EUR</option>
+                          </select>
+                        ) : p.currency_code}
+                      </td>
+                      <td>
+                        {isEditing ? (
+                          <div className="form-check form-switch mb-0">
+                            <input
+                              type="checkbox"
+                              className="form-check-input"
+                              role="switch"
+                              checked={editPriceData.is_default}
+                              onChange={(e) => setEditPriceData({ ...editPriceData, is_default: e.target.checked })}
+                            />
+                          </div>
+                        ) : (
+                          <span className={`badge ${p.is_default ? 'bg-warning text-dark' : 'bg-secondary'}`}>
+                            {p.is_default ? 'Evet' : 'Hayır'}
+                          </span>
+                        )}
+                      </td>
+                      <td>
+                        {isEditing ? (
+                          <div className="d-flex gap-1">
+                            <button className="btn btn-sm btn-success" onClick={() => handleSaveEdit(p.id)} title="Kaydet"><BsCheck2 /></button>
+                            <button className="btn btn-sm btn-outline-secondary" onClick={() => setEditingPriceId(null)} title="İptal"><BsX /></button>
+                          </div>
+                        ) : (
+                          <div className="d-flex gap-1">
+                            <button className="btn btn-sm btn-outline-secondary" onClick={() => handleStartEdit(p)} title="Düzenle"><BsPencil /></button>
+                            <button className="btn btn-sm btn-outline-danger" onClick={() => handleDelete(p.id)} title="Sil"><BsTrash /></button>
+                          </div>
+                        )}
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>

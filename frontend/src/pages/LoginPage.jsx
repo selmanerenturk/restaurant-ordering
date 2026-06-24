@@ -36,6 +36,9 @@ function LoginPage() {
   const isAuthenticated = useSelector(selectIsAuthenticated);
   const isSeller = useSelector(selectIsSeller);
 
+  // Register ("Üye ol") is disabled for this single-shop app. The UI only ever
+  // shows login; the register form below is kept intact (but unreachable) so it
+  // can be re-enabled later by restoring the "Üye ol" tab button.
   const [mode, setMode] = useState('login');
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -98,7 +101,7 @@ function LoginPage() {
     setLoginTurnstileToken(null);
   };
 
-  // --- Register ---
+  // --- Register (currently unreachable; kept for future use) ---
   const updateReg = (field, value) => {
     setRegForm((prev) => ({ ...prev, [field]: value }));
     if (regErrors[field]) setRegErrors((prev) => ({ ...prev, [field]: null }));
@@ -145,33 +148,26 @@ function LoginPage() {
             <div className="card-header bg-dark-brown text-center py-4">
               {mode === 'login' ? (
                 <>
-                  <BsMoonStars size={40} className="text-gold mb-2" />
+                  <BsMoonStars size={40} className="text-white mb-2" />
                   <h3 className="text-white mb-0">Satıcı girişi</h3>
                 </>
               ) : (
                 <>
-                  <BsPersonPlus size={40} className="text-gold mb-2" />
+                  <BsPersonPlus size={40} className="text-white mb-2" />
                   <h3 className="text-white mb-0">Satıcı olun</h3>
                 </>
               )}
             </div>
             <div className="card-body p-4">
-              {/* Tab Buttons */}
+              {/* Tab Buttons — only "Giriş Yap"; "Üye ol" intentionally removed (single-shop app) */}
               <div className="d-flex mb-4">
                 <button
                   type="button"
-                  className={`btn flex-fill me-1 ${mode === 'login' ? 'btn-gold' : 'btn-outline-secondary'}`}
+                  className="btn btn-gold w-100"
                   onClick={() => switchMode('login')}
                 >
                   Giriş Yap
                 </button>
-{/*                 <button */}
-{/*                   type="button" */}
-{/*                   className={`btn flex-fill ms-1 ${mode === 'register' ? 'btn-gold' : 'btn-outline-secondary'}`} */}
-{/*                   onClick={() => switchMode('register')} */}
-{/*                 > */}
-{/*                   Üye ol */}
-{/*                 </button> */}
               </div>
 
               {/* Server Error */}
@@ -220,91 +216,93 @@ function LoginPage() {
                       <><span className="spinner-border spinner-border-sm me-2" role="status"></span>Giriş Yapılıyor...</>
                     ) : 'Giriş Yap'}
                   </button>
-{/*                   <p className="text-center text-muted mt-3 mb-0"> */}
-{/*                     Hesabınız yok mu?{' '} */}
-{/*                     <button type="button" className="btn btn-link p-0 fw-semibold" onClick={() => switchMode('üye ol')}> */}
-{/*                       Burdan üye ol */}
-{/*                     </button> */}
-{/*                   </p> */}
+                  {/* "Burdan üye ol" linki kaldırıldı — ileride gerekirse geri açılabilir:
+                  <p className="text-center text-muted mt-3 mb-0">
+                    Hesabınız yok mu?{' '}
+                    <button type="button" className="btn btn-link p-0 fw-semibold" onClick={() => switchMode('register')}>
+                      Burdan üye ol
+                    </button>
+                  </p>
+                  */}
                 </form>
               )}
 
-              {/* Register Form */}
-{/*               {mode === 'register' && ( */}
-{/*                 <form onSubmit={handleRegister} noValidate> */}
-{/*                   <h6 className="fw-bold text-muted mb-3 border-bottom pb-2">Kişisel bilgi</h6> */}
-{/*                   <div className="row"> */}
-{/*                     <div className="col-md-6 mb-3"> */}
-{/*                       <label className="form-label fw-semibold">İsim *</label> */}
-{/*                       <input type="text" className={fieldClass(regErrors.name)} value={regForm.name} onChange={(e) => updateReg('name', e.target.value)} placeholder="isminiz" /> */}
-{/*                       {regErrors.name && <div className="invalid-feedback">{regErrors.name}</div>} */}
-{/*                     </div> */}
-{/*                     <div className="col-md-6 mb-3"> */}
-{/*                       <label className="form-label fw-semibold">Soyisim *</label> */}
-{/*                       <input type="text" className={fieldClass(regErrors.surname)} value={regForm.surname} onChange={(e) => updateReg('surname', e.target.value)} placeholder="Soyisminiz" /> */}
-{/*                       {regErrors.surname && <div className="invalid-feedback">{regErrors.surname}</div>} */}
-{/*                     </div> */}
-{/*                   </div> */}
-{/*                   <h6 className="fw-bold text-muted mb-3 border-bottom pb-2">Kurumasl bilgiler</h6> */}
-{/*                   <div className="row"> */}
-{/*                     <div className="col-md-6 mb-3"> */}
-{/*                       <label className="form-label fw-semibold">Firma adı *</label> */}
-{/*                       <input type="text" className={fieldClass(regErrors.firm_name)} value={regForm.firm_name} onChange={(e) => updateReg('firm_name', e.target.value)} placeholder="Firma adınız" /> */}
-{/*                       {regErrors.firm_name && <div className="invalid-feedback">{regErrors.firm_name}</div>} */}
-{/*                     </div> */}
-{/*                     <div className="col-md-6 mb-3"> */}
-{/*                       <label className="form-label fw-semibold">Vergi numarası *</label> */}
-{/*                       <input type="text" className={fieldClass(regErrors.tax_number)} value={regForm.tax_number} onChange={(e) => updateReg('tax_number', e.target.value)} placeholder="Vergi numaranız" /> */}
-{/*                       {regErrors.tax_number && <div className="invalid-feedback">{regErrors.tax_number}</div>} */}
-{/*                     </div> */}
-{/*                   </div> */}
+              {/* Register Form — unreachable (no tab switches to 'register'); kept for future use */}
+              {mode === 'register' && (
+                <form onSubmit={handleRegister} noValidate>
+                  <h6 className="fw-bold text-muted mb-3 border-bottom pb-2">Kişisel bilgi</h6>
+                  <div className="row">
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label fw-semibold">İsim *</label>
+                      <input type="text" className={fieldClass(regErrors.name)} value={regForm.name} onChange={(e) => updateReg('name', e.target.value)} placeholder="isminiz" />
+                      {regErrors.name && <div className="invalid-feedback">{regErrors.name}</div>}
+                    </div>
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label fw-semibold">Soyisim *</label>
+                      <input type="text" className={fieldClass(regErrors.surname)} value={regForm.surname} onChange={(e) => updateReg('surname', e.target.value)} placeholder="Soyisminiz" />
+                      {regErrors.surname && <div className="invalid-feedback">{regErrors.surname}</div>}
+                    </div>
+                  </div>
+                  <h6 className="fw-bold text-muted mb-3 border-bottom pb-2">Kurumsal bilgiler</h6>
+                  <div className="row">
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label fw-semibold">Firma adı *</label>
+                      <input type="text" className={fieldClass(regErrors.firm_name)} value={regForm.firm_name} onChange={(e) => updateReg('firm_name', e.target.value)} placeholder="Firma adınız" />
+                      {regErrors.firm_name && <div className="invalid-feedback">{regErrors.firm_name}</div>}
+                    </div>
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label fw-semibold">Vergi numarası *</label>
+                      <input type="text" className={fieldClass(regErrors.tax_number)} value={regForm.tax_number} onChange={(e) => updateReg('tax_number', e.target.value)} placeholder="Vergi numaranız" />
+                      {regErrors.tax_number && <div className="invalid-feedback">{regErrors.tax_number}</div>}
+                    </div>
+                  </div>
 
-{/*                   <h6 className="fw-bold text-muted mb-3 border-bottom pb-2">İletişim bilgisileri</h6> */}
-{/*                   <div className="row"> */}
-{/*                     <div className="col-md-4 mb-3"> */}
-{/*                       <label className="form-label fw-semibold">Telefon *</label> */}
-{/*                       <input type="tel" className={fieldClass(regErrors.phone)} value={regForm.phone} onChange={(e) => updateReg('phone', e.target.value)} placeholder="+90 555 123 4567" /> */}
-{/*                       {regErrors.phone && <div className="invalid-feedback">{regErrors.phone}</div>} */}
-{/*                     </div> */}
-{/*                     <div className="col-md-4 mb-3"> */}
-{/*                       <label className="form-label fw-semibold">Email *</label> */}
-{/*                       <input type="email" className={fieldClass(regErrors.email)} value={regForm.email} onChange={(e) => updateReg('email', e.target.value)} placeholder="seller@example.com" /> */}
-{/*                       {regErrors.email && <div className="invalid-feedback">{regErrors.email}</div>} */}
-{/*                     </div> */}
-{/*                     <div className="col-md-4 mb-3"> */}
-{/*                       <label className="form-label fw-semibold">Şifre *</label> */}
-{/*                       <input type="password" className={fieldClass(regErrors.password)} value={regForm.password} onChange={(e) => updateReg('password', e.target.value)} placeholder="En az 6 karakter" /> */}
-{/*                       {regErrors.password && <div className="invalid-feedback">{regErrors.password}</div>} */}
-{/*                     </div> */}
-{/*                   </div> */}
+                  <h6 className="fw-bold text-muted mb-3 border-bottom pb-2">İletişim bilgileri</h6>
+                  <div className="row">
+                    <div className="col-md-4 mb-3">
+                      <label className="form-label fw-semibold">Telefon *</label>
+                      <input type="tel" className={fieldClass(regErrors.phone)} value={regForm.phone} onChange={(e) => updateReg('phone', e.target.value)} placeholder="+90 555 123 4567" />
+                      {regErrors.phone && <div className="invalid-feedback">{regErrors.phone}</div>}
+                    </div>
+                    <div className="col-md-4 mb-3">
+                      <label className="form-label fw-semibold">Email *</label>
+                      <input type="email" className={fieldClass(regErrors.email)} value={regForm.email} onChange={(e) => updateReg('email', e.target.value)} placeholder="seller@example.com" />
+                      {regErrors.email && <div className="invalid-feedback">{regErrors.email}</div>}
+                    </div>
+                    <div className="col-md-4 mb-3">
+                      <label className="form-label fw-semibold">Şifre *</label>
+                      <input type="password" className={fieldClass(regErrors.password)} value={regForm.password} onChange={(e) => updateReg('password', e.target.value)} placeholder="En az 6 karakter" />
+                      {regErrors.password && <div className="invalid-feedback">{regErrors.password}</div>}
+                    </div>
+                  </div>
 
-{/*                   <h6 className="fw-bold text-muted mb-3 border-bottom pb-2">Adres bilgileri</h6> */}
-{/*                   <div className="mb-3"> */}
-{/*                     <label className="form-label fw-semibold">1. Adres satırı *</label> */}
-{/*                     <input type="text" className={fieldClass(regErrors.address_line1)} value={regForm.address_line1} onChange={(e) => updateReg('address_line1', e.target.value)} placeholder="Mahalle, sokak no." /> */}
-{/*                     {regErrors.address_line1 && <div className="invalid-feedback">{regErrors.address_line1}</div>} */}
-{/*                   </div> */}
-{/*                   <div className="mb-3"> */}
-{/*                     <label className="form-label fw-semibold">2. Adres satırı</label> */}
-{/*                     <input type="text" className="form-control" value={regForm.address_line2} onChange={(e) => updateReg('address_line2', e.target.value)} placeholder="Apartman, bina no. (opsiyonel)" /> */}
-{/*                   </div> */}
-{/*                   <div className="row"> */}
-{/*                     <div className="col-md-4 mb-3"> */}
-{/*                       <label className="form-label fw-semibold">Şehir *</label> */}
-{/*                       <input type="text" className={fieldClass(regErrors.city)} value={regForm.city} onChange={(e) => updateReg('city', e.target.value)} placeholder="Ankara" /> */}
-{/*                       {regErrors.city && <div className="invalid-feedback">{regErrors.city}</div>} */}
-{/*                     </div> */}
-{/*                     <div className="col-md-4 mb-3"> */}
-{/*                       <label className="form-label fw-semibold">İlçe *</label> */}
-{/*                       <input type="text" className={fieldClass(regErrors.district)} value={regForm.district} onChange={(e) => updateReg('district', e.target.value)} placeholder="Çankaya" /> */}
-{/*                       {regErrors.district && <div className="invalid-feedback">{regErrors.district}</div>} */}
-{/*                     </div> */}
-{/*                     <div className="col-md-4 mb-3"> */}
-{/*                       <label className="form-label fw-semibold">Posta kodu *</label> */}
-{/*                       <input type="text" className={fieldClass(regErrors.post_code)} value={regForm.post_code} onChange={(e) => updateReg('post_code', e.target.value)} placeholder="posta kodunuz" /> */}
-{/*                       {regErrors.post_code && <div className="invalid-feedback">{regErrors.post_code}</div>} */}
-{/*                     </div> */}
-{/*                   </div> */}
+                  <h6 className="fw-bold text-muted mb-3 border-bottom pb-2">Adres bilgileri</h6>
+                  <div className="mb-3">
+                    <label className="form-label fw-semibold">1. Adres satırı *</label>
+                    <input type="text" className={fieldClass(regErrors.address_line1)} value={regForm.address_line1} onChange={(e) => updateReg('address_line1', e.target.value)} placeholder="Mahalle, sokak no." />
+                    {regErrors.address_line1 && <div className="invalid-feedback">{regErrors.address_line1}</div>}
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label fw-semibold">2. Adres satırı</label>
+                    <input type="text" className="form-control" value={regForm.address_line2} onChange={(e) => updateReg('address_line2', e.target.value)} placeholder="Apartman, bina no. (opsiyonel)" />
+                  </div>
+                  <div className="row">
+                    <div className="col-md-4 mb-3">
+                      <label className="form-label fw-semibold">Şehir *</label>
+                      <input type="text" className={fieldClass(regErrors.city)} value={regForm.city} onChange={(e) => updateReg('city', e.target.value)} placeholder="Ankara" />
+                      {regErrors.city && <div className="invalid-feedback">{regErrors.city}</div>}
+                    </div>
+                    <div className="col-md-4 mb-3">
+                      <label className="form-label fw-semibold">İlçe *</label>
+                      <input type="text" className={fieldClass(regErrors.district)} value={regForm.district} onChange={(e) => updateReg('district', e.target.value)} placeholder="Çankaya" />
+                      {regErrors.district && <div className="invalid-feedback">{regErrors.district}</div>}
+                    </div>
+                    <div className="col-md-4 mb-3">
+                      <label className="form-label fw-semibold">Posta kodu *</label>
+                      <input type="text" className={fieldClass(regErrors.post_code)} value={regForm.post_code} onChange={(e) => updateReg('post_code', e.target.value)} placeholder="posta kodunuz" />
+                      {regErrors.post_code && <div className="invalid-feedback">{regErrors.post_code}</div>}
+                    </div>
+                  </div>
 
                   <div className="mb-3">
                     <Turnstile
@@ -316,11 +314,11 @@ function LoginPage() {
                     {regErrors.turnstile && <div className="text-danger small mt-1">{regErrors.turnstile}</div>}
                   </div>
 
-{/*                   <button type="submit" className="btn btn-gold w-100 fw-bold py-2" disabled={loading}> */}
-{/*                     {loading ? ( */}
-{/*                       <><span className="spinner-border spinner-border-sm me-2" role="status"></span>Hesap oluşturuluyor</> */}
-{/*                     ) : 'Hesabı oluştur'} */}
-{/*                   </button> */}
+                  <button type="submit" className="btn btn-gold w-100 fw-bold py-2" disabled={loading}>
+                    {loading ? (
+                      <><span className="spinner-border spinner-border-sm me-2" role="status"></span>Hesap oluşturuluyor</>
+                    ) : 'Hesabı oluştur'}
+                  </button>
                   <p className="text-center text-muted mt-3 mb-0">
                     Zaten hesabınız var mı?{' '}
                     <button type="button" className="btn btn-link p-0 fw-semibold" onClick={() => switchMode('login')}>
