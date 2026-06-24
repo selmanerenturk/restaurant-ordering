@@ -13,6 +13,7 @@ import {
   BsX,
   BsArrowUp,
   BsArrowDown,
+  BsFiles,
 } from 'react-icons/bs';
 import { useNavigate } from 'react-router-dom';
 import { fetchProductsWithPrices, updateProduct, deleteProduct, uploadProductImage } from '../services/productService';
@@ -22,6 +23,7 @@ import {
   getProductOptions,
   createOption,
   deleteOption,
+  copyOptionToProducts,
   createOptionItem,
   updateOptionItem,
   deleteOptionItem,
@@ -80,6 +82,12 @@ function ManageProducts() {
     const [addingItemToOptionId, setAddingItemToOptionId] = useState(null);
     const [newItem, setNewItem] = useState({ name: '', extra_price: '0', is_default: false });
 
+    // --- Copy option group to other products ---
+    const [copyingOption, setCopyingOption] = useState(null); // the option group being copied
+    const [copyTargetIds, setCopyTargetIds] = useState([]);
+    const [copying, setCopying] = useState(false);
+    const [copyMessage, setCopyMessage] = useState('');
+
     // ...existing code for loadOptions, handleToggleIngredients, handleCreateGroup, handleDeleteGroup, handleAddItem, handleToggleItemAvailability, handleToggleFeatured, handleDeleteItem...
 
     const loadOptions = useCallback(async (productId) => {
@@ -134,6 +142,36 @@ function ManageProducts() {
       await loadOptions(expandedProductId);
     } catch {
       setError('Grup silinirken hata oluştu');
+    }
+    };
+
+    const handleOpenCopy = (opt) => {
+    setCopyingOption(opt);
+    setCopyTargetIds([]);
+    setCopyMessage('');
+    };
+
+    const toggleCopyTarget = (productId) => {
+    setCopyTargetIds((prev) =>
+      prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId]
+    );
+    };
+
+    const handleConfirmCopy = async () => {
+    if (!copyingOption || copyTargetIds.length === 0) return;
+    try {
+      setCopying(true);
+      const res = await copyOptionToProducts(copyingOption.id, copyTargetIds);
+      setCopyMessage(`${res.copied} ürüne kopyalandı.`);
+      // If the currently expanded product was a target, refresh its options
+      if (expandedProductId && copyTargetIds.includes(expandedProductId)) {
+        await loadOptions(expandedProductId);
+      }
+      setTimeout(() => { setCopyingOption(null); setCopyMessage(''); }, 1200);
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Kopyalama sırasında hata oluştu');
+    } finally {
+      setCopying(false);
     }
     };
 
@@ -890,6 +928,13 @@ function ManageProducts() {
                                       >
                                         <BsPlus /> Malzeme
                                       </button>
+                                      <button
+                                        className="btn btn-sm btn-outline-primary"
+                                        onClick={() => handleOpenCopy(opt)}
+                                        title="Bu grubu başka ürünlere kopyala"
+                                      >
+                                        <BsFiles className="me-1" /> Kopyala
+                                      </button>
                                       <button className="btn btn-sm btn-outline-danger" onClick={() => handleDeleteGroup(opt.id)}>
                                         <BsTrash />
                                       </button>
@@ -1044,6 +1089,60 @@ function ManageProducts() {
                 İptal
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Copy option group to other products ── */}
+      {copyingOption && (
+        <div
+          className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+          style={{ background: 'rgba(0,0,0,0.5)', zIndex: 1070 }}
+          onClick={() => setCopyingOption(null)}
+        >
+          <div
+            className="card border-0 shadow p-4"
+            style={{ maxWidth: '460px', width: '92%', maxHeight: '85vh', overflowY: 'auto' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h5 className="fw-bold mb-1">"{copyingOption.name}" grubunu kopyala</h5>
+            <p className="text-muted small mb-3">Bu malzeme grubunu hangi ürünlere eklemek istersiniz?</p>
+            {copyMessage ? (
+              <div className="alert alert-success py-2 mb-0">{copyMessage}</div>
+            ) : (
+              <>
+                <div style={{ maxHeight: '40vh', overflowY: 'auto' }} className="border rounded p-2 mb-3">
+                  {products.filter((p) => p.id !== copyingOption.product_id).length === 0 ? (
+                    <p className="text-muted small mb-0">Kopyalanacak başka ürün yok.</p>
+                  ) : (
+                    products
+                      .filter((p) => p.id !== copyingOption.product_id)
+                      .map((p) => (
+                        <div key={p.id} className="form-check">
+                          <input
+                            className="form-check-input"
+                            type="checkbox"
+                            id={`copy-${p.id}`}
+                            checked={copyTargetIds.includes(p.id)}
+                            onChange={() => toggleCopyTarget(p.id)}
+                          />
+                          <label className="form-check-label" htmlFor={`copy-${p.id}`}>{p.name}</label>
+                        </div>
+                      ))
+                  )}
+                </div>
+                <div className="d-flex gap-2">
+                  <button
+                    className="btn btn-gold flex-fill"
+                    onClick={handleConfirmCopy}
+                    disabled={copying || copyTargetIds.length === 0}
+                  >
+                    {copying ? 'Kopyalanıyor...' : `Kopyala (${copyTargetIds.length})`}
+                  </button>
+                  <button className="btn btn-outline-secondary" onClick={() => setCopyingOption(null)}>İptal</button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

@@ -68,6 +68,59 @@ def update_option(db: Session, option_id: int, option_in: ProductOptionUpdate) -
     return get_option(db, option_id)
 
 
+def copy_option_to_products(db: Session, option_id: int, product_ids: list[int]) -> int:
+    """Duplicate an option group (with its items) into each target product.
+    Each target gets an independent copy. Returns the number of products copied to."""
+    source = get_option(db, option_id)
+    if source is None:
+        return 0
+
+    from app.models.product import Product
+
+    copied = 0
+    for product_id in set(product_ids):
+        # Skip the source's own product and any non-existent product
+        if product_id == source.product_id:
+            continue
+        if db.query(Product.id).filter(Product.id == product_id).first() is None:
+            continue
+
+        # Append after existing groups on the target product
+        max_order = (
+            db.query(ProductOption.sort_order)
+            .filter(ProductOption.product_id == product_id)
+            .order_by(ProductOption.sort_order.desc())
+            .first()
+        )
+        next_order = (max_order[0] + 1) if max_order else 0
+
+        new_option = ProductOption(
+            product_id=product_id,
+            name=source.name,
+            is_required=source.is_required,
+            allow_multiple=source.allow_multiple,
+            max_selections=source.max_selections,
+            sort_order=next_order,
+        )
+        db.add(new_option)
+        db.flush()
+
+        for item in source.items:
+            db.add(ProductOptionItem(
+                option_id=new_option.id,
+                name=item.name,
+                extra_price=item.extra_price,
+                currency_code=item.currency_code,
+                is_default=item.is_default,
+                is_available=item.is_available,
+                sort_order=item.sort_order,
+            ))
+        copied += 1
+
+    db.commit()
+    return copied
+
+
 def delete_option(db: Session, option_id: int) -> bool:
     option = db.query(ProductOption).filter(ProductOption.id == option_id).first()
     if option is None:

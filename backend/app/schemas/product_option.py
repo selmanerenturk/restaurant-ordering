@@ -49,6 +49,10 @@ class ProductOptionRead(BaseModel):
         from_attributes = True
 
 
+class ProductOptionCopyRequest(BaseModel):
+    product_ids: list[int]
+
+
 class ProductOptionUpdate(BaseModel):
     name: str | None = None
     is_required: bool | None = None

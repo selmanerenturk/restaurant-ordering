@@ -25,6 +25,11 @@ export const deleteOption = async (optionId) => {
   return response.data;
 };
 
+export const copyOptionToProducts = async (optionId, productIds) => {
+  const response = await api.post(`/product_options/${optionId}/copy`, { product_ids: productIds });
+  return response.data;
+};
+
 export const createOptionItem = async (optionId, itemData) => {
   const response = await api.post(`/product_options/${optionId}/items`, itemData);
   return response.data;

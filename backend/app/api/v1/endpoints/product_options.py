@@ -7,6 +7,7 @@ from app.db.CRUD.product_options import (
     create_option,
     update_option,
     delete_option,
+    copy_option_to_products,
     create_option_item,
     update_option_item,
     delete_option_item,
@@ -15,6 +16,7 @@ from app.schemas.product_option import (
     ProductOptionCreate,
     ProductOptionRead,
     ProductOptionUpdate,
+    ProductOptionCopyRequest,
     ProductOptionItemCreate,
     ProductOptionItemRead,
     ProductOptionItemUpdate,
@@ -56,6 +58,19 @@ def edit_option(
     if option is None:
         raise HTTPException(status_code=404, detail="Option not found")
     return option
+
+
+@router.post("/{option_id}/copy")
+def copy_option(
+    option_id: int,
+    body: ProductOptionCopyRequest,
+    db: Session = Depends(get_db),
+    _seller=Depends(get_current_seller),
+):
+    if get_option(db, option_id) is None:
+        raise HTTPException(status_code=404, detail="Option not found")
+    copied = copy_option_to_products(db, option_id, body.product_ids)
+    return {"copied": copied}
 
 
 @router.delete("/{option_id}")
