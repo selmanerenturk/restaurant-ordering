@@ -177,7 +177,7 @@ function ManagePrices() {
                   >
                     <option value="g">g (gram)</option>
                     <option value="kg">kg (kilogram)</option>
-                    <option value="pcs">pcs (fiyat)</option>
+                    <option value="pcs">adet</option>
                     <option value="box">kutu</option>
                   </select>
                 </div>
@@ -290,7 +290,7 @@ function ManagePrices() {
                           >
                             <option value="g">g</option>
                             <option value="kg">kg</option>
-                            <option value="pcs">pcs</option>
+                            <option value="pcs">adet</option>
                             <option value="box">kutu</option>
                           </select>
                         ) : p.unit_code}
