@@ -11,6 +11,8 @@ import {
   BsPencil,
   BsCheck2,
   BsX,
+  BsArrowUp,
+  BsArrowDown,
 } from 'react-icons/bs';
 import { useNavigate } from 'react-router-dom';
 import { fetchProductsWithPrices, updateProduct, deleteProduct, uploadProductImage } from '../services/productService';
@@ -53,9 +55,10 @@ function ManageProducts() {
     const [inlineUrlInput, setInlineUrlInput] = useState('');
     const [inlineUrlSaving, setInlineUrlSaving] = useState(false);
 
-    // --- Inline product name editing ---
+    // --- Inline product name + description editing ---
     const [editingNameId, setEditingNameId] = useState(null);
     const [editNameValue, setEditNameValue] = useState('');
+    const [editDescValue, setEditDescValue] = useState('');
 
     // --- Ref to track which product we're updating (avoids stale closure) ---
     const updatingImageIdRef = useRef(null);
@@ -361,32 +364,74 @@ function ManageProducts() {
     return cat ? cat.name : catId;
     };
 
-    // ─── Inline product name edit ───────────────────────────────────────
+    // ─── Inline product name + description edit ─────────────────────────
     const handleStartEditName = (prod) => {
     setEditingNameId(prod.id);
     setEditNameValue(prod.name);
+    setEditDescValue(prod.description || '');
     };
 
     const handleSaveName = async (productId) => {
     const name = editNameValue.trim();
     if (!name) return;
+    const description = editDescValue;
     try {
-      await updateProduct(productId, { name });
-      setProducts((prev) => prev.map((p) => (p.id === productId ? { ...p, name } : p)));
+      await updateProduct(productId, { name, description });
+      setProducts((prev) => prev.map((p) => (p.id === productId ? { ...p, name, description } : p)));
       setEditingNameId(null);
     } catch (err) {
-      setError(err.response?.data?.detail || 'Ürün adı güncellenirken hata oluştu');
+      setError(err.response?.data?.detail || 'Ürün güncellenirken hata oluştu');
     }
     };
 
-    // ─── Delete product ─────────────────────────────────────────────────
+    // ─── Toggle stock availability ──────────────────────────────────────
+    const handleToggleStock = async (prod) => {
+    try {
+      await updateProduct(prod.id, { instock: !prod.instock });
+      setProducts((prev) => prev.map((p) => (p.id === prod.id ? { ...p, instock: !prod.instock } : p)));
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Stok durumu güncellenirken hata oluştu');
+    }
+    };
+
+    // ─── Reorder products (swap sort_order with neighbor) ───────────────
+    const handleMove = async (prod, direction) => {
+    const idx = products.findIndex((p) => p.id === prod.id);
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= products.length) return;
+    const other = products[swapIdx];
+    // If sort orders are equal (e.g. all default 0), seed from index first
+    const prodOrder = prod.sort_order ?? idx;
+    const otherOrder = other.sort_order ?? swapIdx;
+    try {
+      await updateProduct(prod.id, { sort_order: otherOrder });
+      await updateProduct(other.id, { sort_order: prodOrder });
+      await loadData();
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Sıralama güncellenirken hata oluştu');
+    }
+    };
+
+    // ─── Delete product (force when used in orders) ─────────────────────
     const handleDeleteProduct = async (prod) => {
-    if (!window.confirm(`"${prod.name}" ürününü silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`)) return;
+    if (!window.confirm(`"${prod.name}" ürününü silmek istediğinize emin misiniz?`)) return;
     try {
       await deleteProduct(prod.id);
       setProducts((prev) => prev.filter((p) => p.id !== prod.id));
     } catch (err) {
-      setError(err.response?.data?.detail || 'Ürün silinirken hata oluştu');
+      if (err.response?.status === 409) {
+        const msg = err.response?.data?.detail || 'Bu ürün siparişlerde kullanılıyor.';
+        if (window.confirm(`${msg}\n\nYine de silinsin mi?`)) {
+          try {
+            await deleteProduct(prod.id, true);
+            setProducts((prev) => prev.filter((p) => p.id !== prod.id));
+          } catch (e2) {
+            setError(e2.response?.data?.detail || 'Ürün silinirken hata oluştu');
+          }
+        }
+      } else {
+        setError(err.response?.data?.detail || 'Ürün silinirken hata oluştu');
+      }
     }
     };
 
@@ -581,6 +626,7 @@ function ManageProducts() {
             <table className="table table-hover mb-0">
               <thead className="table-light">
                 <tr>
+                  <th style={{ width: '70px' }}>Sıra</th>
                   <th>ID</th>
                   <th>Ürün görseli</th>
                   <th>Ürün adı</th>
@@ -594,12 +640,32 @@ function ManageProducts() {
               <tbody>
                 {products.length === 0 ? (
                   <tr>
-                    <td colSpan="8" className="text-center py-4 text-muted">Ürün bulunamadı</td>
+                    <td colSpan="9" className="text-center py-4 text-muted">Ürün bulunamadı</td>
                   </tr>
                 ) : (
-                  products.map((prod) => (
+                  products.map((prod, idx) => (
                     <React.Fragment key={prod.id}>
                       <tr>
+                        <td>
+                          <div className="d-flex gap-1">
+                            <button
+                              className="btn btn-sm btn-outline-secondary p-0 px-1"
+                              disabled={idx === 0}
+                              onClick={() => handleMove(prod, 'up')}
+                              title="Yukarı"
+                            >
+                              <BsArrowUp />
+                            </button>
+                            <button
+                              className="btn btn-sm btn-outline-secondary p-0 px-1"
+                              disabled={idx === products.length - 1}
+                              onClick={() => handleMove(prod, 'down')}
+                              title="Aşağı"
+                            >
+                              <BsArrowDown />
+                            </button>
+                          </div>
+                        </td>
                         <td>{prod.id}</td>
                         <td>
                           <div
@@ -637,39 +703,65 @@ function ManageProducts() {
                             )}
                           </div>
                         </td>
-                        <td className="fw-semibold">
+                        <td className="fw-semibold" style={{ minWidth: '220px' }}>
                           {editingNameId === prod.id ? (
-                            <div className="d-flex gap-1 align-items-center">
+                            <div className="d-flex flex-column gap-2">
                               <input
                                 type="text"
                                 className="form-control form-control-sm"
-                                style={{ minWidth: '120px' }}
                                 value={editNameValue}
                                 onChange={(e) => setEditNameValue(e.target.value)}
                                 autoFocus
+                                placeholder="Ürün adı"
                                 onKeyDown={(e) => { if (e.key === 'Enter') handleSaveName(prod.id); if (e.key === 'Escape') setEditingNameId(null); }}
                               />
-                              <button className="btn btn-sm btn-success" onClick={() => handleSaveName(prod.id)} title="Kaydet"><BsCheck2 /></button>
-                              <button className="btn btn-sm btn-outline-secondary" onClick={() => setEditingNameId(null)} title="İptal"><BsX /></button>
+                              <textarea
+                                className="form-control form-control-sm"
+                                rows={2}
+                                value={editDescValue}
+                                onChange={(e) => setEditDescValue(e.target.value)}
+                                placeholder="Açıklama"
+                              />
+                              <div className="d-flex gap-1">
+                                <button className="btn btn-sm btn-success" onClick={() => handleSaveName(prod.id)} title="Kaydet"><BsCheck2 /> Kaydet</button>
+                                <button className="btn btn-sm btn-outline-secondary" onClick={() => setEditingNameId(null)} title="İptal"><BsX /></button>
+                              </div>
                             </div>
                           ) : (
-                            <span className="d-inline-flex align-items-center gap-2">
-                              {prod.name}
-                              <button
-                                className="btn btn-sm btn-link p-0 text-secondary"
-                                onClick={() => handleStartEditName(prod)}
-                                title="İsmi düzenle"
-                              >
-                                <BsPencil />
-                              </button>
-                            </span>
+                            <div>
+                              <span className="d-inline-flex align-items-center gap-2">
+                                {prod.name}
+                                <button
+                                  className="btn btn-sm btn-link p-0 text-secondary"
+                                  onClick={() => handleStartEditName(prod)}
+                                  title="Ad ve açıklamayı düzenle"
+                                >
+                                  <BsPencil />
+                                </button>
+                              </span>
+                              {prod.description && (
+                                <div className="text-muted small fw-normal text-truncate" style={{ maxWidth: '240px' }}>
+                                  {prod.description}
+                                </div>
+                              )}
+                            </div>
                           )}
                         </td>
                         <td>{getCategoryName(prod.category_id)}</td>
                         <td>
-                          <span className={`badge ${prod.instock ? 'bg-success' : 'bg-danger'}`}>
-                            {prod.instock ? 'Evet' : 'Hayır'}
-                          </span>
+                          <div className="form-check form-switch mb-0 d-flex align-items-center gap-2">
+                            <input
+                              type="checkbox"
+                              className="form-check-input"
+                              role="switch"
+                              checked={prod.instock}
+                              onChange={() => handleToggleStock(prod)}
+                              title="Stok durumunu değiştir"
+                            />
+                            <span className={`badge ${prod.instock ? 'bg-success' : 'bg-danger'}`}>
+                              {prod.instock ? 'Var' : 'Yok'}
+                            </span>
+                          </div>
                         </td>
                         <td className="text-center">
                           <button
@@ -710,7 +802,7 @@ function ManageProducts() {
                       {/* Inline ingredient management */}
                       {expandedProductId === prod.id && (
                         <tr>
-                          <td colSpan="8" className="bg-light p-3">
+                          <td colSpan="9" className="bg-light p-3">
                             <div className="d-flex justify-content-between align-items-center mb-3">
                               <h6 className="fw-bold mb-0">{prod.name} — Malzeme Grupları</h6>
                               <button

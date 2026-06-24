@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
-import { BsArrowLeft, BsShop, BsClock, BsTelephone, BsGeoAlt, BsImage, BsClipboard, BsXCircle, BsCheckCircle } from 'react-icons/bs';
+import { useState, useEffect, useRef } from 'react';
+import { BsArrowLeft, BsShop, BsClock, BsTelephone, BsGeoAlt, BsImage, BsClipboard, BsXCircle, BsCheckCircle, BsCloudUpload } from 'react-icons/bs';
 import { useNavigate } from 'react-router-dom';
 import { getRestaurantSettings, updateRestaurantSettings } from '../services/restaurantSettingsService';
+import { uploadProductImage } from '../services/productService';
+import { getImageUrl } from '../utils/imageUrl';
 
 const DAYS = [
   { key: 'monday', label: 'Pazartesi' },
@@ -27,6 +29,8 @@ function ManageSettings() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState('');
+  const [logoUploading, setLogoUploading] = useState(false);
+  const logoInputRef = useRef(null);
 
   const loadSettings = async () => {
     try {
@@ -74,6 +78,22 @@ function ManageSettings() {
 
   const updateField = (field, value) => {
     setSettings((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      setLogoUploading(true);
+      setError(null);
+      const res = await uploadProductImage(file);
+      updateField('logo_url', res.imageurl);
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Logo yüklenirken hata oluştu');
+    } finally {
+      setLogoUploading(false);
+      if (logoInputRef.current) logoInputRef.current.value = '';
+    }
   };
 
   const updateDayTime = (day, field, value) => {
@@ -156,19 +176,38 @@ function ManageSettings() {
               </div>
               <div className="mb-3">
                 <label className="form-label fw-semibold">
-                  <BsImage className="me-1" /> Logo URL
+                  <BsImage className="me-1" /> Logo
                 </label>
                 <input
                   type="url"
-                  className="form-control"
+                  className="form-control mb-2"
                   value={settings.logo_url || ''}
                   onChange={(e) => updateField('logo_url', e.target.value)}
-                  placeholder="https://..."
+                  placeholder="https://... (URL girin veya aşağıdan yükleyin)"
                 />
+                <input
+                  type="file"
+                  ref={logoInputRef}
+                  className="d-none"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  onChange={handleLogoUpload}
+                />
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary btn-sm"
+                  onClick={() => logoInputRef.current && logoInputRef.current.click()}
+                  disabled={logoUploading}
+                >
+                  {logoUploading ? (
+                    <><span className="spinner-border spinner-border-sm me-2" role="status"></span>Yükleniyor...</>
+                  ) : (
+                    <><BsCloudUpload className="me-1" /> Bilgisayardan yükle</>
+                  )}
+                </button>
                 {settings.logo_url && (
                   <div className="mt-2">
                     <img
-                      src={settings.logo_url}
+                      src={getImageUrl(settings.logo_url)}
                       alt="Logo"
                       className="rounded border"
                       style={{ maxHeight: '80px', objectFit: 'contain' }}

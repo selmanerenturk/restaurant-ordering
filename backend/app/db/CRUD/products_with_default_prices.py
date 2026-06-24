@@ -31,7 +31,7 @@ def get_products_with_default_prices(db: Session):
         ProductPrice.is_default == True,
         Category.is_active == True,
     ).order_by(
-        Category.sort_order, Product.name
+        Category.sort_order, Product.sort_order, Product.name
     )
 
     rows = query.all()

@@ -54,16 +54,17 @@ def patch_product(
 @router.delete("/{product_id}")
 def remove_product(
     product_id: int,
+    force: bool = False,
     db: Session = Depends(get_db),
     current_seller: User = Depends(get_current_seller),
 ):
-    result = delete_product(db, product_id)
+    result = delete_product(db, product_id, force=force)
     if result == "not_found":
         raise HTTPException(status_code=404, detail="Product not found")
     if result == "in_use":
         raise HTTPException(
             status_code=409,
-            detail="Bu ürün mevcut siparişlerde kullanıldığı için silinemez. Bunun yerine ürünü 'stok dışı' yapabilirsiniz.",
+            detail="Bu ürün mevcut siparişlerde kullanılıyor. Yine de silmek için onaylayın (sipariş geçmişi korunur).",
         )
     return {"detail": "Deleted"}
 

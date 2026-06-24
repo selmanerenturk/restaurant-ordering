@@ -20,6 +20,7 @@ class ProductUpdate(BaseModel):
     description: Optional[str] = None
     instock: Optional[bool] = None
     is_featured: Optional[bool] = None
+    sort_order: Optional[int] = None
     imageurl: Optional[str] = None
     category_id: Optional[int] = None
 
@@ -27,6 +28,7 @@ class ProductUpdate(BaseModel):
 class ProductRead(ProductBase):
     id: int
     is_featured: bool = False
+    sort_order: int = 0
 
     class Config:
         from_attributes = True

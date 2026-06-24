@@ -39,6 +39,28 @@ def init_db():
             print(f"Note: could not add tracking_token column: {e}")
             conn.rollback()
 
+        # Add sort_order to products if missing
+        try:
+            conn.execute(text(
+                "ALTER TABLE products ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0"
+            ))
+            conn.commit()
+            print("Ensured 'sort_order' column exists on products.")
+        except Exception as e:
+            print(f"Note: could not add sort_order column: {e}")
+            conn.rollback()
+
+        # Allow order_items product FKs to be NULL so products/prices can be
+        # deleted while keeping order history (snapshots remain intact).
+        try:
+            conn.execute(text("ALTER TABLE order_items ALTER COLUMN product_id DROP NOT NULL"))
+            conn.execute(text("ALTER TABLE order_items ALTER COLUMN product_price_id DROP NOT NULL"))
+            conn.commit()
+            print("Ensured order_items.product_id / product_price_id are nullable.")
+        except Exception as e:
+            print(f"Note: could not relax order_items NOT NULL constraints: {e}")
+            conn.rollback()
+
 
 if __name__ == "__main__":
     init_db()

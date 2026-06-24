@@ -17,7 +17,7 @@ import ManageProductOptions from './pages/ManageProductOptions';
 import ManageDiscounts from './pages/ManageDiscounts';
 import ManageSettings from './pages/ManageSettings';
 import TrackOrderPage from './pages/TrackOrderPage';
-import { fetchAvailability } from './redux/restaurantSlice';
+import { fetchAvailability, fetchSettings } from './redux/restaurantSlice';
 import './App.css';
 
 function AppContent() {
@@ -25,6 +25,7 @@ function AppContent() {
 
   useEffect(() => {
     dispatch(fetchAvailability());
+    dispatch(fetchSettings());
     const interval = setInterval(() => {
       dispatch(fetchAvailability());
     }, 60000); // poll every 60 seconds

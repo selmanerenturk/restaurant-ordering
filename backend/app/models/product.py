@@ -12,6 +12,7 @@ class Product(Base):
     description = Column(String)
     instock = Column(Boolean, default=True, nullable=False)
     is_featured = Column(Boolean, default=False, nullable=False)
+    sort_order = Column(Integer, default=0, nullable=False)
     imageurl = Column(String, nullable=False)
     category_id = Column(Integer,  ForeignKey('categories.id'), nullable=False)
 

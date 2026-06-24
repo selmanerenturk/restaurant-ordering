@@ -101,8 +101,8 @@ class OrderItemOptionRead(BaseModel):
 
 class OrderItemRead(BaseModel):
     id: int
-    product_id: int
-    product_price_id: int
+    product_id: int | None = None
+    product_price_id: int | None = None
     product_name_snapshot: str
     quantity_code_snapshot: int
     unit_code_snapshot: str

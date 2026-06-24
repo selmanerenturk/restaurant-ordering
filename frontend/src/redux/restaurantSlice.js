@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { getRestaurantAvailability } from '../services/restaurantSettingsService';
+import { getRestaurantAvailability, getRestaurantSettings } from '../services/restaurantSettingsService';
 
 export const fetchAvailability = createAsyncThunk(
   'restaurant/fetchAvailability',
@@ -12,12 +12,24 @@ export const fetchAvailability = createAsyncThunk(
   }
 );
 
+export const fetchSettings = createAsyncThunk(
+  'restaurant/fetchSettings',
+  async (_, { rejectWithValue }) => {
+    try {
+      return await getRestaurantSettings();
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.detail || 'Restoran bilgileri alınamadı');
+    }
+  }
+);
+
 const restaurantSlice = createSlice({
   name: 'restaurant',
   initialState: {
     is_open: true,
     reason: null,
     next_open_time: null,
+    info: null, // restaurant settings (name, logo_url, phone, address, hours)
     loading: false,
     error: null,
   },
@@ -37,6 +49,9 @@ const restaurantSlice = createSlice({
       .addCase(fetchAvailability.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      })
+      .addCase(fetchSettings.fulfilled, (state, action) => {
+        state.info = action.payload;
       });
   },
 });
@@ -44,6 +59,7 @@ const restaurantSlice = createSlice({
 export const selectRestaurantOpen = (state) => state.restaurant.is_open;
 export const selectRestaurantReason = (state) => state.restaurant.reason;
 export const selectRestaurantNextOpen = (state) => state.restaurant.next_open_time;
+export const selectRestaurantInfo = (state) => state.restaurant.info;
 
 export default restaurantSlice.reducer;
 

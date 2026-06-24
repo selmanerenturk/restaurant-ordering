@@ -9,8 +9,10 @@ class OrderItem(Base):
     id = Column(Integer, primary_key=True, index=True)
     order_id = Column(Integer, ForeignKey("orders.id"), nullable=False, index=True)
 
-    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
-    product_price_id = Column(Integer, ForeignKey("product_prices.id"), nullable=False)
+    # Nullable so a product/price can be deleted while order history is preserved
+    # (the *_snapshot columns below keep the human-readable record).
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=True)
+    product_price_id = Column(Integer, ForeignKey("product_prices.id"), nullable=True)
 
     product_name_snapshot = Column(String, nullable=False)
     quantity_code_snapshot = Column(Integer, nullable=False)

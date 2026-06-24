@@ -20,8 +20,8 @@ export const updateProduct = async (productId, data) => {
   return response.data;
 };
 
-export const deleteProduct = async (productId) => {
-  const response = await api.delete(`/products/${productId}`);
+export const deleteProduct = async (productId, force = false) => {
+  const response = await api.delete(`/products/${productId}`, { params: force ? { force: true } : {} });
   return response.data;
 };
 
