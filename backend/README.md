@@ -1,4 +1,4 @@
-cle# Pastry Shop
+Restaurant Ordering
 
 This project is a Python application that uses a virtual environment and has database dependencies.
 
